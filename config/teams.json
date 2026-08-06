@@ -1,0 +1,83 @@
+[
+  {
+    "name": "IT Helpdesk",
+    "charter": "Handles day-to-day hardware, software, and device issues for individual employees. First line of support for anything blocking a single person's ability to work.",
+    "example_requests": [
+      "My laptop won't turn on",
+      "I need a monitor replaced",
+      "My dock isn't charging my laptop"
+    ]
+  },
+  {
+    "name": "Network Engineering",
+    "charter": "Owns office and campus network infrastructure: wifi, switches, VPN, and connectivity issues affecting more than a single device.",
+    "example_requests": [
+      "Wifi keeps dropping on floor 3",
+      "VPN is unreachable from the Austin office",
+      "Conference room AV network is down"
+    ]
+  },
+  {
+    "name": "Data Platform",
+    "charter": "Owns data warehouse access, dashboards, ETL pipelines, and analytics tooling. Handles data access requests and reporting/dashboard issues.",
+    "example_requests": [
+      "The revenue dashboard shows stale numbers",
+      "I need read access to the analytics database",
+      "Can we get a new pipeline for the marketing data feed"
+    ]
+  },
+  {
+    "name": "Security",
+    "charter": "Handles security incidents, suspected compromise, phishing, and access anomalies. Owns incident response and account lockdown decisions.",
+    "example_requests": [
+      "I think I entered my password on a phishing site",
+      "I'm getting MFA prompts I didn't trigger",
+      "Someone may have accessed my account"
+    ]
+  },
+  {
+    "name": "Business Applications",
+    "charter": "Owns internal SaaS tooling: Slack, shared drives, CRM, ticketing systems, and project-specific software provisioning.",
+    "example_requests": [
+      "Set up a Slack channel and shared drive for a new project",
+      "We need a CRM instance for the new vendor",
+      "Can we get a shared calendar for onboarding"
+    ]
+  },
+  {
+    "name": "HR Operations",
+    "charter": "Handles compensation, payroll, performance, conflict, and employee-relations matters. Any request touching pay, benefits, or personnel issues.",
+    "example_requests": [
+      "My paycheck was short this month",
+      "I want to raise a concern about a manager",
+      "Question about my benefits enrollment"
+    ]
+  },
+  {
+    "name": "Facilities",
+    "charter": "Owns physical office space: building access, desks, meeting rooms, and on-site equipment not related to IT hardware.",
+    "example_requests": [
+      "My badge doesn't work on the 4th floor",
+      "We need more chairs in the east conference room",
+      "The AC on floor 2 is broken"
+    ]
+  },
+  {
+    "name": "Intake Review Queue",
+    "charter": "Fallback queue for requests that do not clearly map to an existing team's charter. A human triages and reroutes from here.",
+    "example_requests": [
+      "General requests that don't fit any specific category",
+      "Cross-functional asks spanning multiple teams",
+      "Unclear ownership requests"
+    ]
+  },
+  {
+    "name": "Sensitive Intake Review",
+    "charter": "Guardrail destination for requests involving HR-sensitive matters (compensation, performance, conflict, termination, harassment) or legal/compliance exposure. Always routed here by policy, regardless of model suggestion, for human handling.",
+    "example_requests": [
+      "Compensation or payroll disputes",
+      "Harassment or conflict reports",
+      "Contract, regulatory, or data-privacy exposure"
+    ]
+  }
+]
