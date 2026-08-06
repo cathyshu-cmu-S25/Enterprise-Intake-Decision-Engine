@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --border: #e2e5ea;
+  --text: #1a1d23;
+  --text-muted: #6b7280;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Monospace panel used for deterministic (code-driven) decisions, to
+   visually distinguish them from LLM-authored card content. */
+.code-panel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #1e293b;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
