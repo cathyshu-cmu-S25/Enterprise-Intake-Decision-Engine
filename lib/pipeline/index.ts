@@ -121,6 +121,7 @@ export async function runPipeline(
     multiple_intents: step1.signals.multiple_intents,
     is_p0: priority.level === "P0",
     injection_cap: guardrails.confidence_cap,
+    forced_review: guardrails.forced_team !== null,
   });
   emit({ type: "gate_decision", data: gate });
 

@@ -8,6 +8,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: false,
       is_p0: false,
       injection_cap: null,
+      forced_review: false,
     });
     expect(result.confidence).toBe("low");
     expect(result.proceed).toBe(false);
@@ -19,6 +20,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: true,
       is_p0: false,
       injection_cap: null,
+      forced_review: false,
     });
     expect(result.confidence).toBe("low");
     expect(result.proceed).toBe(false);
@@ -30,6 +32,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: false,
       is_p0: false,
       injection_cap: null,
+      forced_review: false,
     });
     expect(result.confidence).toBe("medium");
     expect(result.proceed).toBe(true);
@@ -41,6 +44,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: false,
       is_p0: false,
       injection_cap: "medium",
+      forced_review: false,
     });
     expect(result.confidence).toBe("medium");
     expect(result.proceed).toBe(true);
@@ -52,6 +56,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: false,
       is_p0: false,
       injection_cap: null,
+      forced_review: false,
     });
     expect(result.confidence).toBe("high");
     expect(result.proceed).toBe(true);
@@ -65,6 +70,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: false,
       is_p0: true,
       injection_cap: null,
+      forced_review: false,
     });
     // missing_information_count >= 2 AND no P0 is false here (is_p0 is true),
     // so the label should NOT be forced to low by that clause alone.
@@ -78,6 +84,7 @@ describe("computeConfidenceGate", () => {
       multiple_intents: true,
       is_p0: true,
       injection_cap: null,
+      forced_review: false,
     });
     expect(result.confidence).toBe("low");
     expect(result.proceed).toBe(true);
@@ -90,7 +97,49 @@ describe("computeConfidenceGate", () => {
       multiple_intents: true,
       is_p0: true,
       injection_cap: "medium",
+      forced_review: false,
     });
     expect(result.proceed).toBe(true);
+  });
+
+  // --- forced_review exception: sensitive matters always proceed ----------
+
+  it("forced_review exception: proceeds with 3 missing items, but keeps the label honest (still low)", () => {
+    const result = computeConfidenceGate({
+      missing_information_count: 3,
+      multiple_intents: false,
+      is_p0: false,
+      injection_cap: null,
+      forced_review: true,
+    });
+    expect(result.confidence).toBe("low");
+    expect(result.proceed).toBe(true);
+    expect(result.reason).toMatch(/sensitive matters route to human review/i);
+  });
+
+  it("forced_review exception: proceeds when multiple_intents is true", () => {
+    const result = computeConfidenceGate({
+      missing_information_count: 0,
+      multiple_intents: true,
+      is_p0: false,
+      injection_cap: null,
+      forced_review: true,
+    });
+    expect(result.confidence).toBe("low");
+    expect(result.proceed).toBe(true);
+    expect(result.reason).toMatch(/sensitive matters route to human review/i);
+  });
+
+  it("forced_review exception: does not alter the reason when confidence isn't low", () => {
+    const result = computeConfidenceGate({
+      missing_information_count: 0,
+      multiple_intents: false,
+      is_p0: false,
+      injection_cap: null,
+      forced_review: true,
+    });
+    expect(result.confidence).toBe("high");
+    expect(result.proceed).toBe(true);
+    expect(result.reason).not.toMatch(/proceeding regardless/i);
   });
 });

@@ -5,6 +5,7 @@ export interface ConfidenceGateInput {
   multiple_intents: boolean;
   is_p0: boolean; // true when the deterministic priority rule fired P0
   injection_cap: ConfidenceLevel | null; // "medium" when guardrails capped confidence
+  forced_review: boolean; // true when guardrails force routing to human review (hr_sensitive / legal_compliance_related)
 }
 
 /**
@@ -12,13 +13,17 @@ export interface ConfidenceGateInput {
  * information to proceed to a real routing decision, or should stop and
  * ask clarifying questions instead.
  *
- * Exception: P0 signals always proceed (never block a security incident on
- * missing info) — but the confidence *label* is still computed honestly by
- * the same rules, so a P0 case can still show as "low confidence, proceeding
- * anyway" in the UI.
+ * Exceptions — these always proceed (never block on missing info), but the
+ * confidence *label* is still computed honestly by the same rules, so a case
+ * can still show as "low confidence, proceeding anyway" in the UI:
+ * - P0 signals (security incident / production outage).
+ * - forced_review cases (hr_sensitive / legal_compliance_related): sensitive
+ *   matters must route straight to human review rather than interrogating
+ *   a distressed requester with clarifying questions.
  */
 export function computeConfidenceGate(input: ConfidenceGateInput): GateDecision {
-  const { missing_information_count, multiple_intents, is_p0, injection_cap } = input;
+  const { missing_information_count, multiple_intents, is_p0, injection_cap, forced_review } =
+    input;
 
   let confidence: ConfidenceLevel;
   let reason: string;
@@ -38,11 +43,12 @@ export function computeConfidenceGate(input: ConfidenceGateInput): GateDecision 
     reason = "All necessary information present; no ambiguity signals detected.";
   }
 
-  const proceed = is_p0 ? true : confidence !== "low";
+  const proceed = is_p0 || forced_review ? true : confidence !== "low";
 
-  if (is_p0 && confidence === "low") {
-    reason +=
-      " Proceeding regardless: P0 security/outage signals are never blocked on missing information.";
+  if (confidence === "low" && proceed) {
+    reason += is_p0
+      ? " Proceeding regardless: P0 security/outage signals are never blocked on missing information."
+      : " Proceeding regardless: sensitive matters route to human review immediately rather than being interrogated by an automated system.";
   }
 
   return { confidence, reason, proceed };
