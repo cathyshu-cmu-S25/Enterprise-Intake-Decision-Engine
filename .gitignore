@@ -20,3 +20,9 @@ npm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local prompt notes (not part of the shipped project)
+claude_code_prompt_final.md
+
+# eval: raw per-run JSON results (latest.md is the committed report)
+eval/results/*.json
