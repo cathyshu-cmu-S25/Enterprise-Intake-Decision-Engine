@@ -10,8 +10,11 @@ import {
   GateDecisionPanel,
   GuardrailPanel,
 } from "@/components/DecisionPanel";
-import { FinalResultPanel, type FinalResultLike } from "@/components/FinalResultPanel";
+import { FinalResultPanel } from "@/components/FinalResultPanel";
 import { PolicyPanel } from "@/components/PolicyPanel";
+import { RequesterResultPanel } from "@/components/RequesterResultPanel";
+import { toRequesterView } from "@/lib/requesterView";
+import type { FinalResult } from "@/lib/schemas";
 
 // Loose client-side shapes mirroring lib/schemas.ts (kept local to avoid
 // pulling server-only modules into the client bundle).
@@ -55,7 +58,7 @@ type SseEvent =
   | { type: "rule_decision"; data: RuleDecision }
   | { type: "gate_decision"; data: GateDecision }
   | { type: "guardrail"; data: GuardrailEvent }
-  | { type: "final"; data: FinalResultLike & { decision_metadata: { timings_ms: { total: number } } } }
+  | { type: "final"; data: FinalResult }
   | { type: "error"; message: string };
 
 async function consumeSSE(response: Response, onEvent: (evt: SseEvent) => void) {
@@ -186,9 +189,10 @@ export default function Home() {
   const [ruleDecision, setRuleDecision] = useState<RuleDecision | null>(null);
   const [gateDecision, setGateDecision] = useState<GateDecision | null>(null);
   const [guardrailEvents, setGuardrailEvents] = useState<GuardrailEvent[]>([]);
-  const [finalResult, setFinalResult] = useState<FinalResultLike | null>(null);
+  const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
   const [totalMs, setTotalMs] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"operator" | "requester">("operator");
 
   const currentStepRef = useRef<1 | 2 | 3 | null>(null);
 
@@ -336,51 +340,91 @@ export default function Home() {
           )}
         </section>
 
-        {/* Right column — live reasoning view */}
+        {/* Right column */}
         <section className="flex flex-col gap-4">
-          <StepCard
-            title="1 · Understand"
-            status={step1Status}
-            badge={
-              injectionDetected ? (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                  Injection attempt detected — treated as data
-                </span>
-              ) : undefined
-            }
-          >
-            {step1Data && <Step1Content data={step1Data} />}
-          </StepCard>
+          <div className="inline-flex w-fit rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("operator")}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                viewMode === "operator"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Operator view
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("requester")}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                viewMode === "requester"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Requester view
+            </button>
+          </div>
 
-          <StepCard title="2 · Assess" status={step2Status}>
-            {step2Data && <Step2Content data={step2Data} />}
-          </StepCard>
+          {viewMode === "operator" ? (
+            <>
+              {/* Live reasoning view — the demo centerpiece */}
+              <StepCard
+                title="1 · Understand"
+                status={step1Status}
+                badge={
+                  injectionDetected ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                      Injection attempt detected — treated as data
+                    </span>
+                  ) : undefined
+                }
+              >
+                {step1Data && <Step1Content data={step1Data} />}
+              </StepCard>
 
-          <PolicyPanel />
+              <StepCard title="2 · Assess" status={step2Status}>
+                {step2Data && <Step2Content data={step2Data} />}
+              </StepCard>
 
-          {ruleDecision && (
-            <RuleDecisionPanel level={ruleDecision.level} rule_fired={ruleDecision.rule_fired} />
-          )}
-          {guardrailEvents.map((g, i) => (
-            <GuardrailPanel key={i} action={g.action} reason={g.reason} />
-          ))}
-          {gateDecision && (
-            <GateDecisionPanel
-              confidence={gateDecision.confidence}
-              reason={gateDecision.reason}
-              proceed={gateDecision.proceed}
-            />
-          )}
+              <PolicyPanel />
 
-          <StepCard title="3 · Decide" status={step3Status}>
-            {step3Data && <Step3Content data={step3Data} />}
-          </StepCard>
+              {ruleDecision && (
+                <RuleDecisionPanel level={ruleDecision.level} rule_fired={ruleDecision.rule_fired} />
+              )}
+              {guardrailEvents.map((g, i) => (
+                <GuardrailPanel key={i} action={g.action} reason={g.reason} />
+              ))}
+              {gateDecision && (
+                <GateDecisionPanel
+                  confidence={gateDecision.confidence}
+                  reason={gateDecision.reason}
+                  proceed={gateDecision.proceed}
+                />
+              )}
 
-          {finalResult && <FinalResultPanel result={finalResult} />}
+              <StepCard title="3 · Decide" status={step3Status}>
+                {step3Data && <Step3Content data={step3Data} />}
+              </StepCard>
 
-          {totalMs !== null && (
-            <div className="text-right text-xs text-gray-400">
-              Total latency: <span className="font-medium text-gray-600">{totalMs}ms</span>
+              {finalResult && <FinalResultPanel result={finalResult} />}
+
+              {totalMs !== null && (
+                <div className="text-right text-xs text-gray-400">
+                  Total latency: <span className="font-medium text-gray-600">{totalMs}ms</span>
+                </div>
+              )}
+            </>
+          ) : finalResult ? (
+            <RequesterResultPanel view={toRequesterView(finalResult)} />
+          ) : running ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
+              Working on it…
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-sm text-gray-400">
+              Run a triage to see what the requester would see.
             </div>
           )}
         </section>
