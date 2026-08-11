@@ -37,7 +37,17 @@ Field notes:
 - hr_sensitive: compensation, performance, conflict, termination, harassment.
 - legal_compliance_related: contracts, regulatory matters, data privacy, legal exposure.
 - budget_commitment_requested: the request asks the reader to commit spend or approve a purchase.
-- missing_information: what a skilled operator would need to act on this but was not provided. Only list genuinely missing items, not nice-to-haves.
+- missing_information: information whose ABSENCE prevents a TRIAGE decision — that is,
+  prevents you from determining what kind of request this is, which team should own it,
+  or how urgent it is. This is a ROUTING bar, not a RESOLUTION bar.
+
+  Do NOT list diagnostic detail that the assigned team would gather themselves as part
+  of doing the work: device models, OS or software versions, exact timestamps, error
+  logs, steps already attempted, account identifiers, or reproduction steps.
+
+  Test: if you can name a plausible owning team and a plausible urgency from what is
+  written, missing_information should be empty. Most well-formed requests have ZERO
+  missing items. Listing items is the exception, not the default.
 - reasoning: 2-3 sentences explaining your interpretation.`;
 
 export async function runStep1Understand(requestText: string): Promise<Step1Output> {
