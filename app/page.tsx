@@ -11,6 +11,7 @@ import {
   GuardrailPanel,
 } from "@/components/DecisionPanel";
 import { FinalResultPanel, type FinalResultLike } from "@/components/FinalResultPanel";
+import { PolicyPanel } from "@/components/PolicyPanel";
 
 // Loose client-side shapes mirroring lib/schemas.ts (kept local to avoid
 // pulling server-only modules into the client bundle).
@@ -354,6 +355,8 @@ export default function Home() {
           <StepCard title="2 · Assess" status={step2Status}>
             {step2Data && <Step2Content data={step2Data} />}
           </StepCard>
+
+          <PolicyPanel />
 
           {ruleDecision && (
             <RuleDecisionPanel level={ruleDecision.level} rule_fired={ruleDecision.rule_fired} />

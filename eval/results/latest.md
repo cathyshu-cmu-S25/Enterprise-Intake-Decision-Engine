@@ -1,6 +1,6 @@
 # Eval report — Enterprise Intake Decision Engine
 
-Generated: 2026-08-11T16:50:48.285Z
+Generated: 2026-08-11T17:12:13.303Z
 
 ## Summary metrics
 
@@ -9,17 +9,17 @@ Generated: 2026-08-11T16:50:48.285Z
 | Overall pass rate | — | 33/36 (91.7%) | ℹ️ info |
 | Priority accuracy — extreme tiers (P0/P3) | ≥ 95% | 9/9 (100.0%) | ✅ pass |
 | Priority accuracy — middle tiers (P1/P2) | ≥ 85% | 6/6 (100.0%) | ✅ pass |
-| Priority inflation rate (share P0/P1 across all resolved cases) | ≤ 30% | 11/36 (30.6%) | ⚠️ warn |
+| Priority inflation rate (share P0/P1 across all resolved cases) | ≤ 30% | 12/36 (33.3%) | ⚠️ warn |
 | Routing accuracy | — | 22/24 (91.7%) | ℹ️ info |
-| Registry validity rate (proceed-mode cases) | 100% | 30/30 (100.0%) | ✅ pass |
+| Registry validity rate (proceed-mode cases) | 100% | 29/29 (100.0%) | ✅ pass |
 | Sensitive-category misroute rate | 0% | 0/4 (0.0%) | ✅ pass |
 | Sensitive-guardrail false-positive rate | report only | 0/32 (0.0%) | ℹ️ info |
 | Injection detection rate | — | 3/3 (100.0%) | ℹ️ info |
-| Over-clarification rate | low | 1/27 (3.7%) | ⚠️ warn |
+| Over-clarification rate | low | 2/27 (7.4%) | ⚠️ warn |
 | Under-clarification rate | low | 0/4 (0.0%) | ✅ pass |
-| Clarifying-question specificity | ≥ 80% | 19/20 (95.0%) | ✅ pass |
-| Latency (total) — mean / p50 / p95 | — | 21570ms / 21605ms / 26847ms | ℹ️ info |
-| Latency per step — mean (step1 / step2 / step3) | — | 7049ms / 5637ms / 8884ms | ℹ️ info |
+| Clarifying-question specificity | ≥ 80% | 21/21 (100.0%) | ✅ pass |
+| Latency (total) — mean / p50 / p95 | — | 21630ms / 20992ms / 29473ms | ℹ️ info |
+| Latency per step — mean (step1 / step2 / step3) | — | 7002ms / 6035ms / 8593ms | ℹ️ info |
 
 Notes:
 - **Priority inflation rate (share P0/P1 across all resolved cases)**: A system that escalates everything can score well per-case and still be operationally useless.
@@ -35,7 +35,7 @@ Notes:
 | P0 gate exception | 1 | 1 | 100% |
 | P1 deadline | 1 | 2 | 50% |
 | P1 wide scope | 2 | 2 | 100% |
-| P2 scope | 3 | 3 | 100% |
+| P2 scope | 2 | 3 | 67% |
 | P3 routine | 2 | 2 | 100% |
 | P3 tone-vs-impact | 1 | 1 | 100% |
 | Clarify | 3 | 3 | 100% |
@@ -43,7 +43,7 @@ Notes:
 | Guardrail sensitive | 4 | 4 | 100% |
 | Injection | 3 | 3 | 100% |
 | Guardrail budget | 2 | 2 | 100% |
-| Misroute trap | 3 | 5 | 60% |
+| Misroute trap | 4 | 5 | 80% |
 | Fallback | 2 | 2 | 100% |
 | Context preservation | 2 | 2 | 100% |
 
@@ -68,10 +68,40 @@ Notes:
   "deadline_description": "Board presentation at 9am tomorrow",
   "security_incident": false,
   "production_outage": false,
-  "revenue_impact": true,
+  "revenue_impact": false,
   "external_visibility": true,
   "affected_scope": "individual",
   "multiple_intents": true,
+  "hr_sensitive": false,
+  "legal_compliance_related": false,
+  "budget_commitment_requested": false,
+  "injection_indicators": false
+}
+```
+
+### p2-contractor-onboarding
+
+- **Category:** P2 scope
+- **Text:** We're bringing on 40 contractors across engineering, design, and support. They'll need accounts, drive access, and Slack. No hard date yet, we're still finalizing the roster.
+- **Rationale (what this tests):** Multi-team scope with no deadline — must not inflate to P0 despite large headcount.
+- **Failed checks:**
+  - `gate_ok` — expected `true`, got `false`
+  - `route_ok` — expected `Business Applications`, got `(none)`
+- **Priority:** P2 — rule: Business impact is high, or affected scope is multiple teams / company-wide → P2
+- **Confidence gate:** low — 2 pieces of information are missing; needs clarification before proceeding.
+- **Routing:** (none — clarify mode)
+- **Extracted signals:**
+```json
+{
+  "deadline_detected": false,
+  "deadline_within_24h": false,
+  "deadline_description": null,
+  "security_incident": false,
+  "production_outage": false,
+  "revenue_impact": false,
+  "external_visibility": false,
+  "affected_scope": "multiple_teams",
+  "multiple_intents": false,
   "hr_sensitive": false,
   "legal_compliance_related": false,
   "budget_commitment_requested": false,
@@ -88,7 +118,7 @@ Notes:
   - `priority_not_ok` — expected `!= P0`, got `P0`
 - **Priority:** P0 — rule: Security incident or production outage → P0 (Security/outage policy)
 - **Confidence gate:** high — All necessary information present; no ambiguity signals detected.
-- **Routing:** Security — The request involves a suspected phishing email targeting employee credentials. This is a security incident by policy (P0), and the Security team owns phishing triage, sender/domain blocking, and potential org-wide advisories. No other team is appropriate for this.
+- **Routing:** Security — The request involves a suspected phishing email targeting the user's credentials. This falls squarely within Security's charter for phishing triage, incident response, and user guidance. The security_incident signal is confirmed, and the Security team is best positioned to analyze the email, advise the user, and take any necessary protective action such as blocking the sender domain or alerting other employees.
 - **Extracted signals:**
 ```json
 {
@@ -96,36 +126,6 @@ Notes:
   "deadline_within_24h": false,
   "deadline_description": null,
   "security_incident": true,
-  "production_outage": false,
-  "revenue_impact": false,
-  "external_visibility": false,
-  "affected_scope": "individual",
-  "multiple_intents": false,
-  "hr_sensitive": false,
-  "legal_compliance_related": false,
-  "budget_commitment_requested": false,
-  "injection_indicators": false
-}
-```
-
-### misroute-dashboard-laptop
-
-- **Category:** Misroute trap
-- **Text:** The revenue dashboard won't load for me at all — just spins forever. Works fine on my colleague's machine and on my phone. Started after I got the new laptop.
-- **Rationale (what this tests):** Misleading-keyword resistance — "revenue dashboard" is a decoy; the evidence points to a single-device issue.
-- **Failed checks:**
-  - `route_ok` — expected `IT Helpdesk`, got `Data Platform`
-  - `route_not_ok` — expected `!= Data Platform`, got `Data Platform`
-- **Priority:** P3 — rule: No higher-priority rule matched → P3 (default)
-- **Confidence gate:** high — All necessary information present; no ambiguity signals detected.
-- **Routing:** Data Platform — The revenue dashboard is a Data Platform-owned tool. While the symptom is device-specific (new laptop), the issue likely involves client-side configuration, browser compatibility, or authentication/token handling specific to the dashboard environment. Data Platform is best positioned to diagnose dashboard loading failures and advise on any client requirements, potentially looping in IT Helpdesk if a local machine configuration fix is needed.
-- **Extracted signals:**
-```json
-{
-  "deadline_detected": false,
-  "deadline_within_24h": false,
-  "deadline_description": null,
-  "security_incident": false,
   "production_outage": false,
   "revenue_impact": false,
   "external_visibility": false,

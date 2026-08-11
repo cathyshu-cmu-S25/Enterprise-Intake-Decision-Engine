@@ -1,5 +1,12 @@
 import type { Step1Signals, ConfidenceLevel, GuardrailResult } from "./schemas";
-import { SENSITIVE_INTAKE_REVIEW } from "./teams";
+import { SENSITIVE_POLICY } from "@/config/policy";
+import { validateSignalNames } from "./policyEval";
+
+validateSignalNames([
+  ...SENSITIVE_POLICY.forced_review_signals,
+  ...SENSITIVE_POLICY.incident_precedence_signals,
+  ...SENSITIVE_POLICY.never_exempt_signals,
+]);
 
 /**
  * Deterministic guardrails over Step 1 signals. Runs independently of, and
@@ -13,24 +20,37 @@ export function applyGuardrails(signals: Step1Signals): GuardrailResult {
   let confidence_cap: ConfidenceLevel | null = null;
   let block_spend_commitment = false;
 
-  // Incident response takes precedence over sensitive-category routing.
-  // A security incident with privacy implications is still a security incident;
-  // legal/compliance is notified downstream, it does not become the owner.
-  // hr_sensitive is deliberately NOT subject to this exemption — HR matters
-  // are never incident response.
-  const incidentInProgress = signals.security_incident || signals.production_outage;
+  const getSignal = (name: string): boolean =>
+    (signals as unknown as Record<string, unknown>)[name] === true;
+  const isExempt = (name: string): boolean => SENSITIVE_POLICY.never_exempt_signals.includes(name);
 
-  if (signals.hr_sensitive || (signals.legal_compliance_related && !incidentInProgress)) {
-    forced_team = SENSITIVE_INTAKE_REVIEW;
+  // Incident response takes precedence over sensitive-category routing.
+  // A security incident with privacy implications is still a security
+  // incident; legal/compliance is notified downstream, it does not become
+  // the owner. Signals in never_exempt_signals (HR) are never subject to
+  // this suppression — HR matters are never incident response.
+  const incidentInProgress = SENSITIVE_POLICY.incident_precedence_signals.some(getSignal);
+
+  const shouldForce = SENSITIVE_POLICY.forced_review_signals.some(
+    (name) => getSignal(name) && (isExempt(name) || !incidentInProgress)
+  );
+
+  if (shouldForce) {
+    forced_team = SENSITIVE_POLICY.forced_team;
     const reason = "Sensitive category detected → human review (policy)";
     evidence.push(reason);
     events.push({
-      action: `Routing forced to "${SENSITIVE_INTAKE_REVIEW}"`,
+      action: `Routing forced to "${SENSITIVE_POLICY.forced_team}"`,
       reason,
     });
   }
 
-  if (signals.legal_compliance_related && incidentInProgress) {
+  // Suppressing a guardrail is itself a decision and must appear in the
+  // audit trail — not just the cases where it fires.
+  const suppressedByIncident = SENSITIVE_POLICY.forced_review_signals.some(
+    (name) => getSignal(name) && !isExempt(name) && incidentInProgress
+  );
+  if (suppressedByIncident) {
     evidence.push(
       "Legal/compliance implications noted; routing retained with the incident owner " +
         "(policy: incident response precedes compliance review)."

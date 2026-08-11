@@ -5,6 +5,7 @@ import { computePriority } from "../priorityRules";
 import { applyGuardrails } from "../guardrails";
 import { computeConfidenceGate } from "../confidenceGate";
 import { LLMValidationError } from "../anthropic";
+import { POLICY_VERSION } from "@/config/policy";
 import type {
   FinalResult,
   Step1Output,
@@ -191,6 +192,7 @@ export async function runPipeline(
         step3: step3Ms,
         total: totalMs,
       },
+      policy_version: POLICY_VERSION,
     },
   };
 
