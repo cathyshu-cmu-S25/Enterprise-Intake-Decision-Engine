@@ -53,6 +53,39 @@ describe("applyGuardrails — sensitive category forced routing", () => {
   });
 });
 
+describe("applyGuardrails — incident response precedence", () => {
+  it("does not force routing when legal_compliance_related co-occurs with an active security incident, and records the precedence note", () => {
+    const result = applyGuardrails(
+      signals({ legal_compliance_related: true, security_incident: true })
+    );
+    expect(result.forced_team).toBeNull();
+    expect(
+      result.evidence.some((e) =>
+        e.includes("incident response precedes compliance review")
+      )
+    ).toBe(true);
+  });
+
+  it("does not force routing when legal_compliance_related co-occurs with a production outage", () => {
+    const result = applyGuardrails(
+      signals({ legal_compliance_related: true, production_outage: true })
+    );
+    expect(result.forced_team).toBeNull();
+  });
+
+  it("still forces routing on legal_compliance_related when no incident is in progress", () => {
+    const result = applyGuardrails(signals({ legal_compliance_related: true }));
+    expect(result.forced_team).toBe(SENSITIVE_INTAKE_REVIEW);
+  });
+
+  it("still forces routing on hr_sensitive even when a security incident is in progress — HR is never exempt", () => {
+    const result = applyGuardrails(
+      signals({ hr_sensitive: true, security_incident: true })
+    );
+    expect(result.forced_team).toBe(SENSITIVE_INTAKE_REVIEW);
+  });
+});
+
 describe("applyGuardrails — injection confidence cap", () => {
   it("caps confidence at medium when injection_indicators is true", () => {
     const result = applyGuardrails(signals({ injection_indicators: true }));

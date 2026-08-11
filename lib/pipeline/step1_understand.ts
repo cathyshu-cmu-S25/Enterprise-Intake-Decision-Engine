@@ -35,7 +35,16 @@ Respond with ONLY a single valid JSON object — no markdown code fences, no com
 
 Field notes:
 - hr_sensitive: compensation, performance, conflict, termination, harassment.
-- legal_compliance_related: contracts, regulatory matters, data privacy, legal exposure.
+- legal_compliance_related: the request's PRIMARY SUBJECT is a legal or compliance matter —
+  contract review, a regulatory filing, a data-subject privacy request, or legal exposure
+  someone is explicitly asking to have assessed.
+
+  Set this FALSE when legal or privacy considerations are merely a downstream implication
+  of an operational problem. A breach, a phishing report, or an outage may all eventually
+  have compliance consequences; that does not make them legal matters.
+
+  Test: is the requester asking for legal or compliance judgment, or reporting an
+  operational problem?
 - budget_commitment_requested: the request asks the reader to commit spend or approve a purchase.
 - missing_information: information whose ABSENCE prevents a TRIAGE decision — that is,
   prevents you from determining what kind of request this is, which team should own it,

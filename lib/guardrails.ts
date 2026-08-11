@@ -13,7 +13,14 @@ export function applyGuardrails(signals: Step1Signals): GuardrailResult {
   let confidence_cap: ConfidenceLevel | null = null;
   let block_spend_commitment = false;
 
-  if (signals.hr_sensitive || signals.legal_compliance_related) {
+  // Incident response takes precedence over sensitive-category routing.
+  // A security incident with privacy implications is still a security incident;
+  // legal/compliance is notified downstream, it does not become the owner.
+  // hr_sensitive is deliberately NOT subject to this exemption — HR matters
+  // are never incident response.
+  const incidentInProgress = signals.security_incident || signals.production_outage;
+
+  if (signals.hr_sensitive || (signals.legal_compliance_related && !incidentInProgress)) {
     forced_team = SENSITIVE_INTAKE_REVIEW;
     const reason = "Sensitive category detected → human review (policy)";
     evidence.push(reason);
@@ -21,6 +28,13 @@ export function applyGuardrails(signals: Step1Signals): GuardrailResult {
       action: `Routing forced to "${SENSITIVE_INTAKE_REVIEW}"`,
       reason,
     });
+  }
+
+  if (signals.legal_compliance_related && incidentInProgress) {
+    evidence.push(
+      "Legal/compliance implications noted; routing retained with the incident owner " +
+        "(policy: incident response precedes compliance review)."
+    );
   }
 
   if (signals.budget_commitment_requested) {
