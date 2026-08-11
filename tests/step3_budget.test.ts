@@ -28,6 +28,8 @@ const step1: Step1Output = {
     legal_compliance_related: false,
     budget_commitment_requested: true,
     injection_indicators: false,
+    affected_system: null,
+    symptom_class: "request",
   },
   missing_information: [],
   reasoning: "Straightforward purchase request.",

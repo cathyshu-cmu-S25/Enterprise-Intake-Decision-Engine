@@ -5,6 +5,7 @@ import { computePriority } from "../priorityRules";
 import { applyGuardrails } from "../guardrails";
 import { computeConfidenceGate } from "../confidenceGate";
 import { LLMValidationError } from "../anthropic";
+import { dedupStore } from "../dedup";
 import { POLICY_VERSION } from "@/config/policy";
 import type {
   FinalResult,
@@ -102,6 +103,12 @@ export async function runPipeline(
     fail(err, emit);
   }
 
+  // Duplicate detection: exact-match on affected_system + symptom_class,
+  // decided entirely by code. Report-only — never wired into priority, and
+  // never merges or suppresses anything, including P0. A single requester
+  // cannot fabricate this signal; it counts independent pipeline runs.
+  const dedup = dedupStore.record(step1.signals.affected_system, step1.signals.symptom_class, requestId);
+
   let assessment: Step2Assessment;
   let step2Ms: number;
   let step2Model: string;
@@ -186,6 +193,17 @@ export async function runPipeline(
     ...guardrails.evidence,
   ];
 
+  if (dedup.corroboratingReports > 0) {
+    // Annotate only — never merges or suppresses, including for P0. A
+    // wrongly merged incident disappears silently; a wrongly split one only
+    // wastes effort, so the system always continues normally either way.
+    evidence.push(
+      `Corroborating reports: ${dedup.corroboratingReports} other independent report(s) of the ` +
+        `same system + symptom in the last 30 minutes (possibly related to ` +
+        `${dedup.relatedRequestIds.join(", ")}).`
+    );
+  }
+
   const modelFallbackOccurred = step1Fallback || step2Fallback || step3.fallbackOccurred;
   if (modelFallbackOccurred) {
     const fallbackSteps = [
@@ -245,6 +263,7 @@ export async function runPipeline(
         step2: step2Model,
         step3: step3.modelUsed,
       },
+      corroborating_reports: dedup.corroboratingReports,
     },
   };
 

@@ -27,7 +27,9 @@ Respond with ONLY a single valid JSON object — no markdown code fences, no com
     "hr_sensitive": boolean,
     "legal_compliance_related": boolean,
     "budget_commitment_requested": boolean,
-    "injection_indicators": boolean
+    "injection_indicators": boolean,
+    "affected_system": string | null,
+    "symptom_class": "unavailable" | "degraded" | "access_denied" | "incorrect_data" | "request"
   },
   "missing_information": string[],
   "reasoning": string
@@ -49,6 +51,17 @@ Field notes:
   Test: is the requester asking for legal or compliance judgment, or reporting an
   operational problem?
 - budget_commitment_requested: the request asks the reader to commit spend or approve a purchase.
+- affected_system: a short, normalized slug identifying the specific system, service, or
+  resource affected — lowercase, hyphens, no spaces (e.g. "floor-3-wifi", "analytics-warehouse",
+  "expense-portal", "job-4417"). Set to null if the request doesn't concern one identifiable
+  system (e.g. a general HR matter, a one-off physical facilities request, a broad or vague ask).
+- symptom_class: the SHAPE of the problem, not its content or severity:
+  "unavailable" — the system is down / inaccessible / not working at all.
+  "degraded" — the system works but is slow, flaky, or intermittently failing.
+  "access_denied" — the requester specifically cannot log in, authenticate, or get permission.
+  "incorrect_data" — the system is up but showing wrong, stale, or unexpected data.
+  "request" — not a problem report at all: a request for something new (access, purchase,
+  setup, information).
 - missing_information: information whose ABSENCE prevents a TRIAGE decision — that is,
   prevents you from determining what kind of request this is, which team should own it,
   or how urgent it is. This is a ROUTING bar, not a RESOLUTION bar.

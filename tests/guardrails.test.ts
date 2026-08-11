@@ -18,6 +18,8 @@ function signals(overrides: Partial<Step1Signals> = {}): Step1Signals {
     legal_compliance_related: false,
     budget_commitment_requested: false,
     injection_indicators: false,
+    affected_system: null,
+    symptom_class: "request",
     ...overrides,
   };
 }

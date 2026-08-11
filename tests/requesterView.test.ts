@@ -34,6 +34,8 @@ const forcedReviewResult: FinalResult = {
       legal_compliance_related: false,
       budget_commitment_requested: false,
       injection_indicators: false,
+      affected_system: null,
+      symptom_class: "request",
     },
     evidence: [
       "Sensitive category detected → human review (policy)",
@@ -43,6 +45,7 @@ const forcedReviewResult: FinalResult = {
     timings_ms: { step1: 1000, step2: 1000, step3: 1000, total: 3000 },
     policy_version: "2026-08-11.v1",
     models_used: { step1: "claude-sonnet-4-6", step2: "claude-sonnet-4-6", step3: "claude-sonnet-4-6" },
+    corroborating_reports: 0,
   },
 };
 
@@ -60,6 +63,9 @@ describe("toRequesterView", () => {
     expect(serialized).not.toContain("timings_ms");
     expect(serialized).not.toContain("evidence");
     expect(serialized).not.toContain("policy_version");
+    expect(serialized).not.toContain("corroborating_reports");
+    expect(serialized).not.toContain("affected_system");
+    expect(serialized).not.toContain("symptom_class");
 
     // Explicit allow-list: only these keys are ever allowed to appear.
     expect(Object.keys(view).sort()).toEqual(["classification", "message", "status"].sort());

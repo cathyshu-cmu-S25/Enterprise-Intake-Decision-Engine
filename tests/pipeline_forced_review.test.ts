@@ -39,6 +39,8 @@ describe("runPipeline — guardrail forced routing always proceeds", () => {
             legal_compliance_related: false,
             budget_commitment_requested: false,
             injection_indicators: false,
+            affected_system: null,
+            symptom_class: "request",
           },
           missing_information: [
             "Exact pay period affected",

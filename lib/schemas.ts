@@ -23,6 +23,14 @@ export const Step1SignalsSchema = z.object({
   legal_compliance_related: z.boolean(),
   budget_commitment_requested: z.boolean(),
   injection_indicators: z.boolean(),
+  affected_system: z.string().nullable(),
+  symptom_class: z.enum([
+    "unavailable",
+    "degraded",
+    "access_denied",
+    "incorrect_data",
+    "request",
+  ]),
 });
 export type Step1Signals = z.infer<typeof Step1SignalsSchema>;
 
@@ -133,6 +141,7 @@ export const DecisionMetadataSchema = z.object({
     step2: z.string(),
     step3: z.string(),
   }),
+  corroborating_reports: z.number(),
 });
 export type DecisionMetadata = z.infer<typeof DecisionMetadataSchema>;
 

@@ -7,6 +7,7 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 import { runPipeline, PipelineAbortedError } from "@/lib/pipeline";
 import { PRIMARY_MODEL } from "@/lib/anthropic";
+import { dedupStore } from "@/lib/dedup";
 import { GOLDEN_SET, type GoldenCase } from "./golden-set";
 import { scoreCase } from "./scoring";
 import { computeMetrics } from "./metrics";
@@ -43,6 +44,11 @@ function selectCases(all: GoldenCase[], args: { only?: string; category?: string
 }
 
 async function runCase(c: GoldenCase): Promise<CaseResult> {
+  // Reset dedup state before every case — several golden cases mention
+  // overlapping systems (wifi, VPN, dashboards) and would otherwise collide
+  // with each other across the run, corrupting corroborating_reports for
+  // cases that are not actually related.
+  dedupStore.reset();
   try {
     const result = await runPipeline(c.text);
     const { checks, pass } = scoreCase(c, result);
