@@ -62,14 +62,14 @@ export function FinalResultPanel({ result }: { result: FinalResultLike }) {
         )
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/20 p-3">
         <div className="mb-1 flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Response draft
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+            Sent to requester — this is the entire outbound artifact
           </h4>
           <CopyButton text={result.response_draft} />
         </div>
-        <blockquote className="rounded-lg border-l-4 border-blue-300 bg-blue-50/40 px-4 py-3 text-sm italic text-gray-700">
+        <blockquote className="rounded-lg border-l-4 border-blue-300 bg-white px-4 py-3 text-sm italic text-gray-700">
           {result.response_draft}
         </blockquote>
       </div>

@@ -1,6 +1,7 @@
 import type { FinalResult } from "@/lib/schemas";
-import { isValidTeam } from "@/lib/teams";
+import { isValidTeam, SENSITIVE_INTAKE_REVIEW } from "@/lib/teams";
 import { containsSpendCommitment } from "@/lib/pipeline/step3_decide";
+import { findDraftLeaks, findForcedReviewTeamNameLeak } from "./leakage";
 import type { GoldenCase } from "./golden-set";
 import type { CheckResult } from "./types";
 
@@ -110,6 +111,28 @@ export function scoreCase(c: GoldenCase, result: FinalResult): { checks: CheckRe
     e.no_spend_commitment !== true || containsSpendCommitment(result.response_draft) === false,
     "no spend-commitment language",
     containsSpendCommitment(result.response_draft) ? "contains spend commitment" : "clean"
+  );
+
+  // Applied to EVERY case, independent of its declared expectations —
+  // response_draft is the entire outbound artifact and must never leak
+  // internal decision-making, regardless of what this particular case is
+  // otherwise testing for.
+  const leaks = findDraftLeaks(result);
+  add(
+    "draft_clean",
+    true,
+    leaks.length === 0,
+    "no internal leakage in response_draft",
+    leaks.length === 0 ? "clean" : `leaked: ${leaks.join("; ")}`
+  );
+
+  const teamLeaks = findForcedReviewTeamNameLeak(result);
+  add(
+    "forced_review_no_team_named",
+    result.routing?.team === SENSITIVE_INTAKE_REVIEW,
+    teamLeaks.length === 0,
+    "no internal team named in response_draft",
+    teamLeaks.length === 0 ? "clean" : `leaked: ${teamLeaks.join("; ")}`
   );
 
   if (e.must_preserve && e.must_preserve.length > 0) {

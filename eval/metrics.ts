@@ -1,6 +1,7 @@
 import { isValidTeam } from "@/lib/teams";
 import type { CaseResult } from "./types";
 import { derivedProceed } from "./scoring";
+import { findDraftLeaks } from "./leakage";
 
 export interface MetricRow {
   key: string;
@@ -191,6 +192,20 @@ export function computeMetrics(results: CaseResult[]): MetricRow[] {
     target: "≥ 80%",
     actual: `${specific}/${allQuestions.length} (${fmtPct(specificityRate)})`,
     status: Number.isNaN(specificityRate) || specificityRate >= 80 ? "pass" : "warn",
+  });
+
+  // 13. Outbound leakage rate — response_draft is the ENTIRE outbound
+  // artifact (the requester never opens this app), so this applies to every
+  // resolved case, not just ones that assert it.
+  const leaking = resolved.filter((r) => findDraftLeaks(r.result!).length > 0).length;
+  const leakageRate = pct(leaking, resolved.length);
+  rows.push({
+    key: "outbound_leakage_rate",
+    label: "Outbound leakage rate (response_draft contains internal info)",
+    target: "0%",
+    actual: `${leaking}/${resolved.length} (${fmtPct(leakageRate)})`,
+    status: Number.isNaN(leakageRate) || leakageRate === 0 ? "pass" : "warn",
+    note: "response_draft is delivered as an email/ticket comment — the requester never sees any other field.",
   });
 
   // 12. Latency

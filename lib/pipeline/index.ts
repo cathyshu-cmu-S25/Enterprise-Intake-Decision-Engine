@@ -176,6 +176,7 @@ export async function runPipeline(
       priority,
       gate,
       blockSpendCommitment: guardrails.block_spend_commitment,
+      forcedReview: guardrails.forced_team !== null,
     });
     step3Ms = Date.now() - t0;
     emit({ type: "step_output", step: 3, data: step3 });

@@ -7,7 +7,12 @@ vi.mock("@/lib/anthropic", () => ({
   LLMValidationError: class LLMValidationError extends Error {},
 }));
 
-import { runStep3Decide, containsSpendCommitment } from "@/lib/pipeline/step3_decide";
+import {
+  runStep3Decide,
+  containsSpendCommitment,
+  containsAnyTeamName,
+  buildProceedSystemPrompt,
+} from "@/lib/pipeline/step3_decide";
 import type { Step1Output, Step2Assessment, PriorityDecision, GateDecision } from "@/lib/schemas";
 
 const step1: Step1Output = {
@@ -78,6 +83,7 @@ describe("step3_decide — budget post-check regeneration", () => {
       priority,
       gate,
       blockSpendCommitment: true,
+      forcedReview: false,
     });
 
     expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(2);
@@ -106,6 +112,7 @@ describe("step3_decide — budget post-check regeneration", () => {
       priority,
       gate,
       blockSpendCommitment: true,
+      forcedReview: false,
     });
 
     expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(1);
@@ -130,6 +137,7 @@ describe("step3_decide — budget post-check regeneration", () => {
       priority,
       gate,
       blockSpendCommitment: false,
+      forcedReview: false,
     });
 
     expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(1);
@@ -168,11 +176,151 @@ describe("step3_decide — budget post-check regeneration", () => {
       priority,
       gate,
       blockSpendCommitment: true,
+      forcedReview: false,
     });
 
     expect(result.fallbackOccurred).toBe(true);
     // Reports the model that produced the draft actually used (the regenerated one).
     expect(result.modelUsed).toBe("claude-sonnet-4-6");
+  });
+});
+
+describe("step3_decide — forced-review draft leak regeneration", () => {
+  beforeEach(() => {
+    mockCallLLMWithValidation.mockReset();
+  });
+
+  it("regenerates once when a forced-review draft names an internal team", async () => {
+    mockCallLLMWithValidation
+      .mockResolvedValueOnce({
+        data: {
+          classification: "HR",
+          routing: { team: "HR Operations", reason: "Payroll discrepancy." },
+          response_draft: "Thanks for reaching out — HR Operations will follow up with you shortly.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          classification: "HR",
+          routing: { team: "HR Operations", reason: "Payroll discrepancy." },
+          response_draft: "Thanks for reaching out — a person on our team will follow up with you directly.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
+      });
+
+    const result = await runStep3Decide({
+      requestText: "My paycheck was short.",
+      step1,
+      assessment,
+      priority,
+      gate,
+      blockSpendCommitment: false,
+      forcedReview: true,
+    });
+
+    expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(2);
+    expect(result.mode).toBe("proceed");
+    if (result.mode === "proceed") {
+      expect(containsAnyTeamName(result.response_draft)).toBe(false);
+      expect(result.response_draft).toContain("a person on our team");
+    }
+  });
+
+  it("does not regenerate when the forced-review draft already names no team", async () => {
+    mockCallLLMWithValidation.mockResolvedValueOnce({
+      data: {
+        classification: "HR",
+        routing: { team: "HR Operations", reason: "Payroll discrepancy." },
+        response_draft: "Thanks for reaching out — a person on our team will follow up with you directly.",
+      },
+      modelUsed: "claude-sonnet-4-6",
+      fallbackOccurred: false,
+    });
+
+    const result = await runStep3Decide({
+      requestText: "My paycheck was short.",
+      step1,
+      assessment,
+      priority,
+      gate,
+      blockSpendCommitment: false,
+      forcedReview: true,
+    });
+
+    expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not run the team-name post-check at all when forcedReview is false", async () => {
+    mockCallLLMWithValidation.mockResolvedValueOnce({
+      data: {
+        classification: "IT Support",
+        routing: { team: "IT Helpdesk", reason: "Hardware issue." },
+        response_draft: "Thanks for reaching out — IT Helpdesk will follow up with you shortly.",
+      },
+      modelUsed: "claude-sonnet-4-6",
+      fallbackOccurred: false,
+    });
+
+    const result = await runStep3Decide({
+      requestText: "My monitor is flickering.",
+      step1,
+      assessment,
+      priority,
+      gate,
+      blockSpendCommitment: false,
+      forcedReview: false,
+    });
+
+    expect(mockCallLLMWithValidation).toHaveBeenCalledTimes(1);
+    if (result.mode === "proceed") {
+      expect(result.response_draft).toContain("IT Helpdesk");
+    }
+  });
+});
+
+describe("buildProceedSystemPrompt — clause selection", () => {
+  it("includes neither clause when nothing applies", () => {
+    const prompt = buildProceedSystemPrompt({ blockSpendCommitment: false, forcedReview: false });
+    expect(prompt).not.toContain("sensitive-category policy");
+    expect(prompt).not.toContain("commit spend");
+  });
+
+  it("includes only the sensitive clause when forcedReview is true", () => {
+    const prompt = buildProceedSystemPrompt({ blockSpendCommitment: false, forcedReview: true });
+    expect(prompt).toContain("sensitive-category policy");
+    expect(prompt).not.toContain("MUST NOT commit to spending money");
+  });
+
+  it("includes only the spend clause when blockSpendCommitment is true", () => {
+    const prompt = buildProceedSystemPrompt({ blockSpendCommitment: true, forcedReview: false });
+    expect(prompt).toContain("MUST NOT commit to spending money");
+    expect(prompt).not.toContain("sensitive-category policy");
+  });
+
+  it("includes both clauses when both apply", () => {
+    const prompt = buildProceedSystemPrompt({ blockSpendCommitment: true, forcedReview: true });
+    expect(prompt).toContain("sensitive-category policy");
+    expect(prompt).toContain("MUST NOT commit to spending money");
+  });
+
+  it("always forbids markdown and internal-system language, regardless of clauses", () => {
+    const prompt = buildProceedSystemPrompt({ blockSpendCommitment: false, forcedReview: false });
+    expect(prompt).toContain("NO markdown formatting");
+    expect(prompt).toContain("never write a priority level");
+  });
+});
+
+describe("containsAnyTeamName", () => {
+  it("detects a registry team name in text", () => {
+    expect(containsAnyTeamName("IT Helpdesk will follow up shortly.")).toBe(true);
+    expect(containsAnyTeamName("This has been sent to Security for review.")).toBe(true);
+  });
+
+  it("does not flag text naming no team", () => {
+    expect(containsAnyTeamName("A person on our team will follow up with you directly.")).toBe(false);
   });
 });
 
