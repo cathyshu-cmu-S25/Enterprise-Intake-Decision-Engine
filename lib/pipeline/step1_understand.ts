@@ -34,6 +34,9 @@ Respond with ONLY a single valid JSON object — no markdown code fences, no com
 }
 
 Field notes:
+- production_outage: a system is CURRENTLY unavailable or unusable. Intermittent failure,
+  repeated job failure, or degraded performance with a workaround is NOT an outage —
+  assess those through business_impact instead.
 - hr_sensitive: compensation, performance, conflict, termination, harassment.
 - legal_compliance_related: the request's PRIMARY SUBJECT is a legal or compliance matter —
   contract review, a regulatory filing, a data-subject privacy request, or legal exposure
