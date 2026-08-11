@@ -6,19 +6,33 @@ import fs from "node:fs";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 import { runPipeline, PipelineAbortedError } from "@/lib/pipeline";
+import { PRIMARY_MODEL } from "@/lib/anthropic";
 import { GOLDEN_SET, type GoldenCase } from "./golden-set";
 import { scoreCase } from "./scoring";
 import { computeMetrics } from "./metrics";
 import { printConsoleLine, printConsoleMetrics, buildMarkdownReport } from "./report";
 import type { CaseResult } from "./types";
 
-function parseArgs(argv: string[]): { only?: string; category?: string } {
-  const args: { only?: string; category?: string } = {};
+function parseArgs(argv: string[]): { only?: string; category?: string; allowFallback: boolean } {
+  const args: { only?: string; category?: string; allowFallback: boolean } = {
+    allowFallback: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--only") args.only = argv[++i];
     if (argv[i] === "--category") args.category = argv[++i];
+    if (argv[i] === "--allow-fallback") args.allowFallback = true;
   }
   return args;
+}
+
+/** Returns the step name(s) whose models_used differs from PRIMARY_MODEL, or
+ * an empty array if the chain never advanced for this case. */
+function fallbackSteps(result: CaseResult): string[] {
+  if (!result.result) return [];
+  const used = result.result.decision_metadata.models_used;
+  return (Object.entries(used) as [string, string][])
+    .filter(([, model]) => model !== PRIMARY_MODEL)
+    .map(([step, model]) => `${step} (${model})`);
 }
 
 function selectCases(all: GoldenCase[], args: { only?: string; category?: string }): GoldenCase[] {
@@ -72,12 +86,28 @@ async function main() {
   }
 
   console.log(`Running ${cases.length} case(s) sequentially...\n`);
+  if (args.allowFallback) {
+    console.log("--allow-fallback set: model-chain advancement will NOT abort this run.\n");
+  }
 
   const results: CaseResult[] = [];
   for (const c of cases) {
     const r = await runCase(c);
     results.push(r);
     printConsoleLine(r);
+
+    if (!args.allowFallback) {
+      const fell = fallbackSteps(r);
+      if (fell.length > 0) {
+        console.error(
+          `\n✗✗✗ ABORTING EVAL RUN: model chain advanced during case "${r.id}" — ${fell.join(", ")}.\n` +
+            `Numbers produced across mixed models are not comparable to the primary-model baseline.\n` +
+            `Re-run once the primary model (${PRIMARY_MODEL}) is available, or pass --allow-fallback ` +
+            `to explicitly accept a mixed-model run (e.g. for the Step 6f fallback-verification check).`
+        );
+        process.exit(1);
+      }
+    }
   }
 
   const metrics = computeMetrics(results);

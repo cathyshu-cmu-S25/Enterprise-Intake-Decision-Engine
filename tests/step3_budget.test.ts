@@ -51,14 +51,22 @@ describe("step3_decide — budget post-check regeneration", () => {
   it("regenerates once when the first draft contains spend-commitment language", async () => {
     mockCallLLMWithValidation
       .mockResolvedValueOnce({
-        classification: "Business Applications",
-        routing: { team: "Business Applications", reason: "Procurement request" },
-        response_draft: "We will cover the cost of the new server right away.",
+        data: {
+          classification: "Business Applications",
+          routing: { team: "Business Applications", reason: "Procurement request" },
+          response_draft: "We will cover the cost of the new server right away.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
       })
       .mockResolvedValueOnce({
-        classification: "Business Applications",
-        routing: { team: "Business Applications", reason: "Procurement request" },
-        response_draft: "Thanks for the request — spend decisions require separate approval.",
+        data: {
+          classification: "Business Applications",
+          routing: { team: "Business Applications", reason: "Procurement request" },
+          response_draft: "Thanks for the request — spend decisions require separate approval.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
       });
 
     const result = await runStep3Decide({
@@ -80,9 +88,13 @@ describe("step3_decide — budget post-check regeneration", () => {
 
   it("does not regenerate when the first draft already avoids spend commitment", async () => {
     mockCallLLMWithValidation.mockResolvedValueOnce({
-      classification: "Business Applications",
-      routing: { team: "Business Applications", reason: "Procurement request" },
-      response_draft: "Thanks for the request — spend decisions require separate approval.",
+      data: {
+        classification: "Business Applications",
+        routing: { team: "Business Applications", reason: "Procurement request" },
+        response_draft: "Thanks for the request — spend decisions require separate approval.",
+      },
+      modelUsed: "claude-sonnet-4-6",
+      fallbackOccurred: false,
     });
 
     const result = await runStep3Decide({
@@ -100,9 +112,13 @@ describe("step3_decide — budget post-check regeneration", () => {
 
   it("does not run the post-check at all when blockSpendCommitment is false", async () => {
     mockCallLLMWithValidation.mockResolvedValueOnce({
-      classification: "Business Applications",
-      routing: { team: "Business Applications", reason: "Procurement request" },
-      response_draft: "We will cover the cost of the new server right away.",
+      data: {
+        classification: "Business Applications",
+        routing: { team: "Business Applications", reason: "Procurement request" },
+        response_draft: "We will cover the cost of the new server right away.",
+      },
+      modelUsed: "claude-sonnet-4-6",
+      fallbackOccurred: false,
     });
 
     const result = await runStep3Decide({
@@ -120,6 +136,41 @@ describe("step3_decide — budget post-check regeneration", () => {
       // Regeneration is skipped, so the (uncommitted) draft passes through verbatim.
       expect(result.response_draft).toContain("We will cover the cost");
     }
+  });
+
+  it("reports fallbackOccurred=true if either the initial or regenerated call used the fallback model", async () => {
+    mockCallLLMWithValidation
+      .mockResolvedValueOnce({
+        data: {
+          classification: "Business Applications",
+          routing: { team: "Business Applications", reason: "Procurement request" },
+          response_draft: "We will cover the cost of the new server right away.",
+        },
+        modelUsed: "claude-haiku-4-5-20251001",
+        fallbackOccurred: true,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          classification: "Business Applications",
+          routing: { team: "Business Applications", reason: "Procurement request" },
+          response_draft: "Thanks for the request — spend decisions require separate approval.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
+      });
+
+    const result = await runStep3Decide({
+      requestText: "Can we buy a new server for the team?",
+      step1,
+      assessment,
+      priority,
+      gate,
+      blockSpendCommitment: true,
+    });
+
+    expect(result.fallbackOccurred).toBe(true);
+    // Reports the model that produced the draft actually used (the regenerated one).
+    expect(result.modelUsed).toBe("claude-sonnet-4-6");
   });
 });
 

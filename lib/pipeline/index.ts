@@ -12,6 +12,7 @@ import type {
   Step2Assessment,
   PriorityDecision,
   GateDecision,
+  ConfidenceLevel,
 } from "../schemas";
 
 export type PipelineEvent =
@@ -20,6 +21,7 @@ export type PipelineEvent =
   | { type: "rule_decision"; data: PriorityDecision }
   | { type: "gate_decision"; data: GateDecision }
   | { type: "guardrail"; data: { action: string; reason: string } }
+  | { type: "model_fallback"; data: { step: 1 | 2 | 3; model: string } }
   | { type: "final"; data: FinalResult }
   | { type: "error"; message: string };
 
@@ -84,24 +86,36 @@ export async function runPipeline(
 
   let step1: Step1Output;
   let step1Ms: number;
+  let step1Model: string;
+  let step1Fallback: boolean;
   try {
     emit({ type: "step_start", step: 1, name: "Understand" });
     const t0 = Date.now();
-    step1 = await runStep1Understand(requestText);
+    const call = await runStep1Understand(requestText);
     step1Ms = Date.now() - t0;
+    step1 = call.data;
+    step1Model = call.modelUsed;
+    step1Fallback = call.fallbackOccurred;
     emit({ type: "step_output", step: 1, data: step1 });
+    if (step1Fallback) emit({ type: "model_fallback", data: { step: 1, model: step1Model } });
   } catch (err) {
     fail(err, emit);
   }
 
   let assessment: Step2Assessment;
   let step2Ms: number;
+  let step2Model: string;
+  let step2Fallback: boolean;
   try {
     emit({ type: "step_start", step: 2, name: "Assess" });
     const t0 = Date.now();
-    assessment = await runStep2Assess(requestText, step1);
+    const call = await runStep2Assess(requestText, step1);
     step2Ms = Date.now() - t0;
+    assessment = call.data;
+    step2Model = call.modelUsed;
+    step2Fallback = call.fallbackOccurred;
     emit({ type: "step_output", step: 2, data: assessment });
+    if (step2Fallback) emit({ type: "model_fallback", data: { step: 2, model: step2Model } });
   } catch (err) {
     fail(err, emit);
   }
@@ -116,12 +130,29 @@ export async function runPipeline(
     emit({ type: "guardrail", data: event });
   }
 
+  // A fallback model changes signal quality, not decision logic — the rule
+  // table, guardrails, and gate are untouched, and identical signals still
+  // produce an identical priority. But a degraded sensor should make the
+  // system less certain of itself. Reuse the existing confidence_cap
+  // mechanism (the same one prompt injection uses) rather than inventing a
+  // parallel one; combine before the gate call, so confidenceGate.ts itself
+  // stays untouched.
+  //
+  // Note the ordering constraint: the gate runs BEFORE Step 3 (its proceed
+  // decision shapes how Step 3 runs), so only a Step 1/2 fallback can
+  // actually influence gate.confidence here. A Step-3-only fallback is still
+  // recorded in evidence and models_used below, just without claiming to
+  // have capped a confidence value that was already computed.
+  const preStep3FallbackOccurred = step1Fallback || step2Fallback;
+  const preStep3Cap: ConfidenceLevel | null =
+    guardrails.confidence_cap !== null || preStep3FallbackOccurred ? "medium" : null;
+
   // (d) deterministic confidence gate.
   const gate = computeConfidenceGate({
     missing_information_count: step1.missing_information.length,
     multiple_intents: step1.signals.multiple_intents,
     is_p0: priority.level === "P0",
-    injection_cap: guardrails.confidence_cap,
+    injection_cap: preStep3Cap,
     forced_review: guardrails.forced_team !== null,
   });
   emit({ type: "gate_decision", data: gate });
@@ -141,6 +172,9 @@ export async function runPipeline(
     });
     step3Ms = Date.now() - t0;
     emit({ type: "step_output", step: 3, data: step3 });
+    if (step3.fallbackOccurred) {
+      emit({ type: "model_fallback", data: { step: 3, model: step3.modelUsed } });
+    }
   } catch (err) {
     fail(err, emit);
   }
@@ -151,6 +185,19 @@ export async function runPipeline(
     ...buildBaseEvidence(step1, assessment, priority),
     ...guardrails.evidence,
   ];
+
+  const modelFallbackOccurred = step1Fallback || step2Fallback || step3.fallbackOccurred;
+  if (modelFallbackOccurred) {
+    const fallbackSteps = [
+      step1Fallback ? `step1 (${step1Model})` : null,
+      step2Fallback ? `step2 (${step2Model})` : null,
+      step3.fallbackOccurred ? `step3 (${step3.modelUsed})` : null,
+    ].filter((s): s is string => s !== null);
+    evidence.push(
+      `Fallback model used for ${fallbackSteps.join(", ")} (primary unavailable)` +
+        (preStep3FallbackOccurred ? "; confidence capped accordingly." : ".")
+    );
+  }
 
   let routing: { team: string; reason: string } | null = null;
   let clarifying_questions: string[] | undefined;
@@ -193,6 +240,11 @@ export async function runPipeline(
         total: totalMs,
       },
       policy_version: POLICY_VERSION,
+      models_used: {
+        step1: step1Model,
+        step2: step2Model,
+        step3: step3.modelUsed,
+      },
     },
   };
 

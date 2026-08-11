@@ -128,6 +128,11 @@ export const DecisionMetadataSchema = z.object({
   evidence: z.array(z.string()),
   timings_ms: TimingsSchema,
   policy_version: z.string(),
+  models_used: z.object({
+    step1: z.string(),
+    step2: z.string(),
+    step3: z.string(),
+  }),
 });
 export type DecisionMetadata = z.infer<typeof DecisionMetadataSchema>;
 

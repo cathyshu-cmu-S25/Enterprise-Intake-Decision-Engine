@@ -19,8 +19,22 @@ export interface Step3Input {
 }
 
 export type Step3Result =
-  | { mode: "proceed"; classification: string; routing: { team: string; reason: string }; response_draft: string }
-  | { mode: "clarify"; classification: string; clarifying_questions: string[]; response_draft: string };
+  | {
+      mode: "proceed";
+      classification: string;
+      routing: { team: string; reason: string };
+      response_draft: string;
+      modelUsed: string;
+      fallbackOccurred: boolean;
+    }
+  | {
+      mode: "clarify";
+      classification: string;
+      clarifying_questions: string[];
+      response_draft: string;
+      modelUsed: string;
+      fallbackOccurred: boolean;
+    };
 
 const SHARED_PREAMBLE = `You are the DECIDE stage of a three-step enterprise intake triage pipeline.
 
@@ -104,11 +118,14 @@ async function runProceed(input: Step3Input): Promise<Step3Result> {
     ? PROCEED_SYSTEM_PROMPT_NO_SPEND
     : PROCEED_SYSTEM_PROMPT;
 
-  let result = await callLLMWithValidation({
+  let call = await callLLMWithValidation({
     system,
     user: context,
     schema: Step3ProceedOutputSchema,
   });
+  let result = call.data;
+  let fallbackOccurred = call.fallbackOccurred;
+  let modelUsed = call.modelUsed;
 
   if (input.blockSpendCommitment && containsSpendCommitment(result.response_draft)) {
     // Regenerate once with a stricter instruction, per spec.
@@ -119,11 +136,14 @@ Your previous draft committed spend, which is not allowed for this request:
 
 Rewrite response_draft so it contains NO spend commitment, approval, reimbursement promise, or budget authorization of any kind. Acknowledge the request and explain that spend decisions require separate approval. Respond again with ONLY the JSON object described in the system prompt.`;
 
-    result = await callLLMWithValidation({
+    call = await callLLMWithValidation({
       system: PROCEED_SYSTEM_PROMPT_NO_SPEND,
       user: stricterUser,
       schema: Step3ProceedOutputSchema,
     });
+    result = call.data;
+    fallbackOccurred = fallbackOccurred || call.fallbackOccurred;
+    modelUsed = call.modelUsed; // report the model that produced the draft actually used
   }
 
   // Defensive fallback: if the model picked a team outside the registry
@@ -139,12 +159,14 @@ Rewrite response_draft so it contains NO spend commitment, approval, reimburseme
     classification: result.classification,
     routing: { team, reason },
     response_draft: result.response_draft,
+    modelUsed,
+    fallbackOccurred,
   };
 }
 
 async function runClarify(input: Step3Input): Promise<Step3Result> {
   const context = buildContextBlock(input);
-  const result = await callLLMWithValidation({
+  const { data: result, modelUsed, fallbackOccurred } = await callLLMWithValidation({
     system: CLARIFY_SYSTEM_PROMPT,
     user: context,
     schema: Step3ClarifyOutputSchema,
@@ -155,6 +177,8 @@ async function runClarify(input: Step3Input): Promise<Step3Result> {
     classification: result.classification,
     clarifying_questions: result.clarifying_questions,
     response_draft: result.response_draft,
+    modelUsed,
+    fallbackOccurred,
   };
 }
 

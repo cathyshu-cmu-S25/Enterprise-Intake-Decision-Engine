@@ -76,3 +76,22 @@ export function GuardrailPanel({ action, reason }: { action: string; reason: str
     </div>
   );
 }
+
+const STEP_NAMES: Record<number, string> = { 1: "Understand", 2: "Assess", 3: "Decide" };
+
+/** Visible, not hidden: if the model chain advances mid-demo, the operator
+ * sees it happen live rather than discovering it later in the evidence
+ * trail. Requester view never renders this. */
+export function ModelFallbackPanel({ step, model }: { step: number; model: string }) {
+  return (
+    <div className="animate-fade-in rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-600">
+        Model fallback
+      </div>
+      <div className="text-sm text-amber-900">
+        Step {step} ({STEP_NAMES[step] ?? "?"}) fell back to <span className="font-semibold">{model}</span> —
+        primary model unavailable; confidence degraded accordingly.
+      </div>
+    </div>
+  );
+}

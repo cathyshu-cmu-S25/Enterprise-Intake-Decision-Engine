@@ -9,6 +9,7 @@ import {
   RuleDecisionPanel,
   GateDecisionPanel,
   GuardrailPanel,
+  ModelFallbackPanel,
 } from "@/components/DecisionPanel";
 import { FinalResultPanel } from "@/components/FinalResultPanel";
 import { PolicyPanel } from "@/components/PolicyPanel";
@@ -52,12 +53,17 @@ interface GuardrailEvent {
   action: string;
   reason: string;
 }
+interface ModelFallbackEvent {
+  step: 1 | 2 | 3;
+  model: string;
+}
 type SseEvent =
   | { type: "step_start"; step: 1 | 2 | 3; name: string }
   | { type: "step_output"; step: 1 | 2 | 3; data: unknown }
   | { type: "rule_decision"; data: RuleDecision }
   | { type: "gate_decision"; data: GateDecision }
   | { type: "guardrail"; data: GuardrailEvent }
+  | { type: "model_fallback"; data: ModelFallbackEvent }
   | { type: "final"; data: FinalResult }
   | { type: "error"; message: string };
 
@@ -189,6 +195,7 @@ export default function Home() {
   const [ruleDecision, setRuleDecision] = useState<RuleDecision | null>(null);
   const [gateDecision, setGateDecision] = useState<GateDecision | null>(null);
   const [guardrailEvents, setGuardrailEvents] = useState<GuardrailEvent[]>([]);
+  const [fallbackEvents, setFallbackEvents] = useState<ModelFallbackEvent[]>([]);
   const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
   const [totalMs, setTotalMs] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -206,6 +213,7 @@ export default function Home() {
     setRuleDecision(null);
     setGateDecision(null);
     setGuardrailEvents([]);
+    setFallbackEvents([]);
     setFinalResult(null);
     setTotalMs(null);
     setErrorMessage(null);
@@ -258,6 +266,9 @@ export default function Home() {
             break;
           case "guardrail":
             setGuardrailEvents((prev) => [...prev, event.data]);
+            break;
+          case "model_fallback":
+            setFallbackEvents((prev) => [...prev, event.data]);
             break;
           case "final":
             setFinalResult(event.data);
@@ -369,6 +380,10 @@ export default function Home() {
 
           {viewMode === "operator" ? (
             <>
+              {fallbackEvents.map((f, i) => (
+                <ModelFallbackPanel key={i} step={f.step} model={f.model} />
+              ))}
+
               {/* Live reasoning view — the demo centerpiece */}
               <StepCard
                 title="1 · Understand"
@@ -413,6 +428,16 @@ export default function Home() {
               {totalMs !== null && (
                 <div className="text-right text-xs text-gray-400">
                   Total latency: <span className="font-medium text-gray-600">{totalMs}ms</span>
+                </div>
+              )}
+              {finalResult && (
+                <div className="text-right text-xs text-gray-400">
+                  Models used:{" "}
+                  <span className="font-medium text-gray-600">
+                    step1 {finalResult.decision_metadata.models_used.step1} · step2{" "}
+                    {finalResult.decision_metadata.models_used.step2} · step3{" "}
+                    {finalResult.decision_metadata.models_used.step3}
+                  </span>
                 </div>
               )}
             </>

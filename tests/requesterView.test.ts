@@ -42,6 +42,7 @@ const forcedReviewResult: FinalResult = {
     ],
     timings_ms: { step1: 1000, step2: 1000, step3: 1000, total: 3000 },
     policy_version: "2026-08-11.v1",
+    models_used: { step1: "claude-sonnet-4-6", step2: "claude-sonnet-4-6", step3: "claude-sonnet-4-6" },
   },
 };
 

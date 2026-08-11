@@ -21,44 +21,56 @@ describe("runPipeline — guardrail forced routing always proceeds", () => {
     // clause and land in clarify mode.
     mockCallLLMWithValidation
       .mockResolvedValueOnce({
-        stated_ask: "My paycheck was short this month.",
-        actual_need: "Correction of a payroll shortfall.",
-        consequence_of_inaction: "Employee may not make rent.",
-        signals: {
-          deadline_detected: false,
-          deadline_within_24h: false,
-          deadline_description: null,
-          security_incident: false,
-          production_outage: false,
-          revenue_impact: false,
-          external_visibility: false,
-          affected_scope: "individual",
-          multiple_intents: false,
-          hr_sensitive: true,
-          legal_compliance_related: false,
-          budget_commitment_requested: false,
-          injection_indicators: false,
+        data: {
+          stated_ask: "My paycheck was short this month.",
+          actual_need: "Correction of a payroll shortfall.",
+          consequence_of_inaction: "Employee may not make rent.",
+          signals: {
+            deadline_detected: false,
+            deadline_within_24h: false,
+            deadline_description: null,
+            security_incident: false,
+            production_outage: false,
+            revenue_impact: false,
+            external_visibility: false,
+            affected_scope: "individual",
+            multiple_intents: false,
+            hr_sensitive: true,
+            legal_compliance_related: false,
+            budget_commitment_requested: false,
+            injection_indicators: false,
+          },
+          missing_information: [
+            "Exact pay period affected",
+            "Amount of the shortfall",
+            "Employee ID / payroll record reference",
+          ],
+          reasoning: "Payroll shortfall report; HR-sensitive.",
         },
-        missing_information: [
-          "Exact pay period affected",
-          "Amount of the shortfall",
-          "Employee ID / payroll record reference",
-        ],
-        reasoning: "Payroll shortfall report; HR-sensitive.",
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
       })
       // Step 2: assessment
       .mockResolvedValueOnce({
-        business_impact: "medium",
-        impact_reasoning: "Affects one employee's pay.",
-        estimated_effort: "hours",
-        effort_reasoning: "Payroll correction is usually quick once verified.",
+        data: {
+          business_impact: "medium",
+          impact_reasoning: "Affects one employee's pay.",
+          estimated_effort: "hours",
+          effort_reasoning: "Payroll correction is usually quick once verified.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
       })
       // Step 3: DECIDE — the model, unaware of the guardrail, suggests some
       // other team. The guardrail must override this post-hoc.
       .mockResolvedValueOnce({
-        classification: "Payroll Issue",
-        routing: { team: "HR Operations", reason: "Payroll discrepancy." },
-        response_draft: "Thanks for flagging this — we're looking into your payroll shortfall.",
+        data: {
+          classification: "Payroll Issue",
+          routing: { team: "HR Operations", reason: "Payroll discrepancy." },
+          response_draft: "Thanks for flagging this — we're looking into your payroll shortfall.",
+        },
+        modelUsed: "claude-sonnet-4-6",
+        fallbackOccurred: false,
       });
 
     const result = await runPipeline("My paycheck was short this month.");
@@ -78,5 +90,10 @@ describe("runPipeline — guardrail forced routing always proceeds", () => {
         e.includes('Routing overridden: "HR Operations" → "Sensitive Intake Review"')
       )
     ).toBe(true);
+    expect(result.decision_metadata.models_used).toEqual({
+      step1: "claude-sonnet-4-6",
+      step2: "claude-sonnet-4-6",
+      step3: "claude-sonnet-4-6",
+    });
   });
 });

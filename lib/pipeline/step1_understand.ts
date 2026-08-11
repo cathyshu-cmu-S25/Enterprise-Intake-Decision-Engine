@@ -1,4 +1,4 @@
-import { callLLMWithValidation } from "../anthropic";
+import { callLLMWithValidation, type LLMCallResult } from "../anthropic";
 import { Step1OutputSchema, type Step1Output } from "../schemas";
 
 const SYSTEM_PROMPT = `You are the UNDERSTAND stage of a three-step enterprise intake triage pipeline.
@@ -62,7 +62,9 @@ Field notes:
   missing items. Listing items is the exception, not the default.
 - reasoning: 2-3 sentences explaining your interpretation.`;
 
-export async function runStep1Understand(requestText: string): Promise<Step1Output> {
+export async function runStep1Understand(
+  requestText: string
+): Promise<LLMCallResult<Step1Output>> {
   const user = `<untrusted_request>
 ${requestText}
 </untrusted_request>
