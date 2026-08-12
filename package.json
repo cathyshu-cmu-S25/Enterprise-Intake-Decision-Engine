@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "eval": "tsx eval/run.ts",
-    "eval:consistency": "tsx eval/consistency.ts"
+    "eval": "tsx eval/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
