@@ -1,4 +1,4 @@
-import { PRIORITY_POLICY, POLICY_VERSION } from "@/config/policy";
+import { PRIORITY_POLICY } from "@/config/policy";
 import { PriorityBadge } from "./PriorityBadge";
 
 /**
@@ -10,7 +10,7 @@ export function PolicyPanel() {
   return (
     <details className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-xs text-gray-600">
       <summary className="cursor-pointer select-none font-medium text-gray-500 hover:text-gray-700">
-        Priority policy — {PRIORITY_POLICY.length} rules, evaluated top-down (version {POLICY_VERSION})
+        Priority policy — {PRIORITY_POLICY.length} rules, evaluated top-down
       </summary>
       <ol className="mt-3 flex flex-col gap-2">
         {PRIORITY_POLICY.map((rule, i) => (

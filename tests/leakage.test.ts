@@ -50,9 +50,23 @@ describe("findDraftLeaks", () => {
     expect(findDraftLeaks(result).some((v) => v.includes("priority token"))).toBe(true);
   });
 
-  it("flags the word confidence", () => {
-    const result = baseResult({ response_draft: "Our confidence in this fix is high." });
+  it("flags internal confidence terminology", () => {
+    const result = baseResult({ response_draft: "This was processed at medium confidence." });
     expect(findDraftLeaks(result).some((v) => v.includes("confidence token"))).toBe(true);
+  });
+
+  it("does not flag the ordinary English use of 'confidence'", () => {
+    const result = baseResult({
+      response_draft: "You can have confidence the fix will hold going forward.",
+    });
+    expect(findDraftLeaks(result).some((v) => v.includes("confidence token"))).toBe(false);
+  });
+
+  it("does not flag 'escalated' in ordinary customer-service phrasing", () => {
+    const result = baseResult({
+      response_draft: "This has been escalated to our Security team as an urgent matter.",
+    });
+    expect(findDraftLeaks(result)).toEqual([]);
   });
 
   it("flags the sensitive-review queue name", () => {

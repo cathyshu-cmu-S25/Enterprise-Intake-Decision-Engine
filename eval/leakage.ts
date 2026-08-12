@@ -7,9 +7,19 @@ import { SENSITIVE_INTAKE_REVIEW, TEAMS } from "@/lib/teams";
 // this list follows automatically.
 const SIGNAL_NAMES = Object.keys(Step1SignalsSchema.shape);
 const RULE_IDS = PRIORITY_POLICY.map((r) => r.id);
-const FORBIDDEN_WORDS = ["guardrail", "override", "overridden", "escalated"];
+// "escalated" was deliberately dropped from this list: measured false-positive
+// rate against real generated drafts showed it fires on ordinary, appropriate
+// customer-service phrasing ("this has been escalated to our Security team"),
+// which reveals no internal mechanism at all. "guardrail"/"override"/"overridden"
+// stayed because they don't occur in natural acknowledgement copy.
+const FORBIDDEN_WORDS = ["guardrail", "override", "overridden"];
 const PRIORITY_TOKEN_RE = /\bp[0-3]\b/i;
-const CONFIDENCE_TOKEN_RE = /\bconfidence\b/i;
+// Narrowed to internal-terminology compound phrases rather than the bare
+// word "confidence" — the bare word has a high false-positive rate against
+// ordinary business English ("you can have confidence the fix will hold"),
+// measured directly against generated drafts.
+const CONFIDENCE_TOKEN_RE =
+  /\b(?:low|medium|high)\s+confidence\b|\bconfidence\s+(?:level|gate|cap|capped)\b|\bcapped\s+at\s+(?:low|medium|high)\b/i;
 
 // response_draft is plain text delivered as an email/ticket comment — the
 // UI does not render markdown, so any of these are literal asterisks/hashes
