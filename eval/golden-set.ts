@@ -137,7 +137,7 @@ export const GOLDEN_SET: GoldenCase[] = [
     expect: { priority: "P3", gate_proceed: true, route: "Facilities" },
   },
 
-  // --- E. Clarification behaviour (4) ----------------------------------------
+  // --- E. Clarification behaviour (5) ----------------------------------------
   {
     id: "clarify-vague-dashboard",
     category: "Clarify",
@@ -158,6 +158,14 @@ export const GOLDEN_SET: GoldenCase[] = [
     category: "Clarify",
     text: "Two things — the wifi on floor 3 keeps dropping during standups, and separately, can we get a Slack channel and shared drive set up for the new vendor onboarding project starting Monday?",
     rationale: "Multiple distinct intents must not be silently collapsed into one ticket.",
+    expect: { gate_proceed: false },
+  },
+  {
+    id: "clarify-zero-content",
+    category: "Clarify",
+    text: "help",
+    rationale:
+      "A message with essentially no usable content must trigger clarification even when the model's own reasoning correctly identifies the vacuum but could collapse it into a single missing_information item — the gate reads the array length, not the prose.",
     expect: { gate_proceed: false },
   },
   {

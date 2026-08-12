@@ -73,6 +73,15 @@ Field notes:
   Test: if you can name a plausible owning team and a plausible urgency from what is
   written, missing_information should be empty. Most well-formed requests have ZERO
   missing items. Listing items is the exception, not the default.
+
+  When information genuinely is missing, list each distinct gap separately — what the
+  request concerns, what kind of problem or ask it is, and any urgency/impact signal are
+  three different things to know, not one. A message with essentially no usable content
+  (e.g. a single word like "help" with no subject, system, or description) is typically
+  missing several of these at once; do not collapse that into one generic item just
+  because there is one underlying cause (no context was given). The array's LENGTH is
+  read by downstream code as a severity signal, so it must reflect how much is actually
+  missing, not just that something is.
 - reasoning: 2-3 sentences explaining your interpretation.`;
 
 export async function runStep1Understand(
