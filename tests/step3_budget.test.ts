@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockCallLLMWithValidation = vi.fn();
 
-vi.mock("@/lib/anthropic", () => ({
+vi.mock("@/lib/llm/anthropic", () => ({
   callLLMWithValidation: (...args: unknown[]) => mockCallLLMWithValidation(...args),
   LLMValidationError: class LLMValidationError extends Error {},
 }));

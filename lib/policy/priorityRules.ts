@@ -1,4 +1,4 @@
-import type { Step1Signals, Step2Assessment, PriorityDecision } from "./schemas";
+import type { Step1Signals, Step2Assessment, PriorityDecision } from "../schemas";
 import { PRIORITY_POLICY } from "@/config/policy";
 import { evaluateCondition, validatePolicy } from "./policyEval";
 

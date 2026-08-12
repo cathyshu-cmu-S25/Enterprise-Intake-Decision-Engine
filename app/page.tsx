@@ -14,7 +14,7 @@ import {
 import { FinalResultPanel } from "@/components/FinalResultPanel";
 import { PolicyPanel } from "@/components/PolicyPanel";
 import { RequesterResultPanel } from "@/components/RequesterResultPanel";
-import { toRequesterView } from "@/lib/requesterView";
+import { toRequesterView } from "@/lib/view/requesterView";
 import type { FinalResult } from "@/lib/schemas";
 
 // Loose client-side shapes mirroring lib/schemas.ts (kept local to avoid

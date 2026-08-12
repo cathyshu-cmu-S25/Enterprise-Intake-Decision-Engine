@@ -2,12 +2,12 @@ import dotenv from "dotenv";
 import path from "node:path";
 import fs from "node:fs";
 
-// Load ANTHROPIC_API_KEY etc. from .env.local before anything touches lib/anthropic.ts.
+// Load ANTHROPIC_API_KEY etc. from .env.local before anything touches lib/llm/anthropic.ts.
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 import { runPipeline, PipelineAbortedError } from "@/lib/pipeline";
-import { PRIMARY_MODEL } from "@/lib/anthropic";
-import { dedupStore } from "@/lib/dedup";
+import { PRIMARY_MODEL } from "@/lib/llm/anthropic";
+import { dedupStore } from "@/lib/policy/dedup";
 import { GOLDEN_SET, type GoldenCase } from "./golden-set";
 import { scoreCase } from "./scoring";
 import { computeMetrics } from "./metrics";

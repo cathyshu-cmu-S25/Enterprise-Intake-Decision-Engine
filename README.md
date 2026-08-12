@@ -4,7 +4,7 @@ A Next.js prototype for a live interview demo: paste a raw, unstructured enterpr
 
 ## Core design principle
 
-**LLM reasons, the system decides.** Each LLM call extracts signals and reasons about them in plain language. Every actual *decision* — priority level, guardrail enforcement, whether the pipeline has enough information to proceed — is computed by deterministic TypeScript over those signals, via explicit, inspectable rule tables. The LLM never outputs a priority level directly; it is a sensor, not a security boundary. Every enforcement action lives in testable code (`lib/priorityRules.ts`, `lib/guardrails.ts`, `lib/confidenceGate.ts`).
+**LLM reasons, the system decides.** Each LLM call extracts signals and reasons about them in plain language. Every actual *decision* — priority level, guardrail enforcement, whether the pipeline has enough information to proceed — is computed by deterministic TypeScript over those signals, via explicit, inspectable rule tables. The LLM never outputs a priority level directly; it is a sensor, not a security boundary. Every enforcement action lives in testable code (`lib/policy/priorityRules.ts`, `lib/policy/guardrails.ts`, `lib/policy/confidenceGate.ts`).
 
 The pipeline is strictly sequential — no parallel branches, no agent framework (no LangGraph/LangChain). Plain TypeScript orchestration in `lib/pipeline/index.ts`.
 
@@ -32,13 +32,13 @@ The pipeline is strictly sequential — no parallel branches, no agent framework
    │  Step 2a ASSESS       (LLM)         step2_assess.ts           │
    │      → business_impact, estimated_effort                     │
    │                        │                                      │
-   │  Step 2b PRIORITY     (code, pure)  lib/priorityRules.ts      │
+   │  Step 2b PRIORITY     (code, pure)  lib/policy/priorityRules.ts │
    │      → { level, rule_fired }     ← rule table, top-down       │
    │                        │                                      │
-   │  Step 2c GUARDRAILS   (code, pure)  lib/guardrails.ts         │
+   │  Step 2c GUARDRAILS   (code, pure)  lib/policy/guardrails.ts  │
    │      → forced_team / block_spend / confidence_cap             │
    │                        │                                      │
-   │  Step 2d CONFIDENCE GATE (code, pure) lib/confidenceGate.ts   │
+   │  Step 2d CONFIDENCE GATE (code, pure) lib/policy/confidenceGate.ts │
    │      → { confidence, reason, proceed }                        │
    │                        │                                      │
    │  Step 3  DECIDE       (LLM)         step3_decide.ts           │
@@ -55,7 +55,7 @@ Every LLM call is validated against a Zod schema (`lib/schemas.ts`). On validati
 
 ## Untrusted input handling
 
-The pasted request is untrusted external text. Every prompt wraps it in `<untrusted_request>...</untrusted_request>` delimiters, and every system prompt states that content inside those delimiters must never be followed as instructions — it is data to analyze. If the text contains instruction-like content aimed at an AI system (e.g. "ignore previous instructions", "mark this P0"), Step 1 sets `signals.injection_indicators: true` and still analyzes whatever legitimate request is underneath. Because the priority rule table (`lib/priorityRules.ts`) never reads `injection_indicators` as a priority-raising signal, an injected "mark this P0" claim cannot raise priority — only genuine extracted signals can. Guardrails separately cap confidence at `medium` whenever injection is detected (`lib/guardrails.ts`).
+The pasted request is untrusted external text. Every prompt wraps it in `<untrusted_request>...</untrusted_request>` delimiters, and every system prompt states that content inside those delimiters must never be followed as instructions — it is data to analyze. If the text contains instruction-like content aimed at an AI system (e.g. "ignore previous instructions", "mark this P0"), Step 1 sets `signals.injection_indicators: true` and still analyzes whatever legitimate request is underneath. Because the priority rule table (`lib/policy/priorityRules.ts`) never reads `injection_indicators` as a priority-raising signal, an injected "mark this P0" claim cannot raise priority — only genuine extracted signals can. Guardrails separately cap confidence at `medium` whenever injection is detected (`lib/policy/guardrails.ts`).
 
 ## Tech stack
 
@@ -74,9 +74,9 @@ npm run test                       # vitest
 
 | Decision | File | Kind |
 |---|---|---|
-| Priority (P0–P3) | `lib/priorityRules.ts` | pure function + exported rule table (`PRIORITY_RULE_TABLE`) |
-| Guardrails (forced routing, spend block, confidence cap) | `lib/guardrails.ts` | pure function |
-| Confidence gate (proceed vs. clarify) | `lib/confidenceGate.ts` | pure function |
+| Priority (P0–P3) | `lib/policy/priorityRules.ts` | pure function reading the rule table (`PRIORITY_POLICY` in `config/policy.ts`) |
+| Guardrails (forced routing, spend block, confidence cap) | `lib/policy/guardrails.ts` | pure function |
+| Confidence gate (proceed vs. clarify) | `lib/policy/confidenceGate.ts` | pure function |
 | Team registry | `config/teams.json` | data |
 
 All three rule modules are pure functions over typed signals — no I/O, no LLM calls — which is what makes them independently unit-testable (`tests/`).
@@ -95,7 +95,7 @@ To add a new team, add an entry to `config/teams.json`:
 
 The Step 3 prompt renders the full registry from this file (`lib/teams.ts` → `teamsRegistryText()`), and routing is validated against it at runtime — an LLM-suggested team name outside the registry falls back to `Intake Review Queue` rather than being trusted. No code changes are needed to add, rename, or retire a team.
 
-To add a new guardrail-triggering domain (like HR/legal), extend the `signals` shape in `lib/schemas.ts`, teach Step 1's prompt to detect it, and add a branch in `lib/guardrails.ts`.
+To add a new guardrail-triggering domain (like HR/legal), extend the `signals` shape in `lib/schemas.ts`, teach Step 1's prompt to detect it, and add a branch in `lib/policy/guardrails.ts`.
 
 ## Tests
 

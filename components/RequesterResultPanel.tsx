@@ -1,4 +1,4 @@
-import type { RequesterView } from "@/lib/requesterView";
+import type { RequesterView } from "@/lib/view/requesterView";
 
 /**
  * Plain, non-technical rendering of RequesterView. Deliberately styled

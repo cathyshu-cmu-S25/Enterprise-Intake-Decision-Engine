@@ -1,4 +1,4 @@
-import type { ConfidenceLevel, GateDecision } from "./schemas";
+import type { ConfidenceLevel, GateDecision } from "../schemas";
 import { GATE_POLICY } from "@/config/policy";
 import { validateSignalNames } from "./policyEval";
 

@@ -1,4 +1,4 @@
-import type { FinalResult } from "./schemas";
+import type { FinalResult } from "../schemas";
 
 /**
  * What a requester is allowed to see. This is an explicit allow-list, not a

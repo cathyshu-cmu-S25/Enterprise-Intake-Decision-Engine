@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toRequesterView } from "@/lib/requesterView";
+import { toRequesterView } from "@/lib/view/requesterView";
 import type { FinalResult } from "@/lib/schemas";
 
 const forcedReviewResult: FinalResult = {

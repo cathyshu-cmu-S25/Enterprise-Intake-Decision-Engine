@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { DedupStore } from "@/lib/dedup";
+import { DedupStore } from "@/lib/policy/dedup";
 
 describe("DedupStore", () => {
   let store: DedupStore;

@@ -5,7 +5,7 @@ export const POLICY_VERSION = "2026-08-11.v1";
 
 /**
  * A small declarative condition tree — deliberately NOT a general-purpose
- * rule language. No eval(), no dynamic code; lib/policyEval.ts evaluates
+ * rule language. No eval(), no dynamic code; lib/policy/policyEval.ts evaluates
  * this with a plain switch over the variants below.
  */
 export type Condition =
@@ -28,7 +28,7 @@ export interface PolicyRule {
  * Priority rule table, evaluated top-down — first match wins. This is an
  * organisation-specific policy parameter, not an architectural choice, and
  * is expressed as data for exactly that reason: changing what "P0" means
- * should not require a code review of lib/priorityRules.ts.
+ * should not require a code review of lib/policy/priorityRules.ts.
  */
 export const PRIORITY_POLICY: PolicyRule[] = [
   {

@@ -1,4 +1,4 @@
-import type { Step1Signals, ConfidenceLevel, GuardrailResult } from "./schemas";
+import type { Step1Signals, ConfidenceLevel, GuardrailResult } from "../schemas";
 import { SENSITIVE_POLICY } from "@/config/policy";
 import { validateSignalNames } from "./policyEval";
 

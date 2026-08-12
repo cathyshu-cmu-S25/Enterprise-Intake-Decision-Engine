@@ -1,6 +1,6 @@
 import type { Condition } from "@/config/policy";
-import { Step1SignalsSchema, Step2AssessmentSchema } from "./schemas";
-import type { Step1Signals, Step2Assessment } from "./schemas";
+import { Step1SignalsSchema, Step2AssessmentSchema } from "../schemas";
+import type { Step1Signals, Step2Assessment } from "../schemas";
 
 const VALID_SIGNAL_NAMES = new Set(Object.keys(Step1SignalsSchema.shape));
 const VALID_ASSESSMENT_NAMES = new Set(Object.keys(Step2AssessmentSchema.shape));

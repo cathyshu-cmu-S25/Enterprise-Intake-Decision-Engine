@@ -1,11 +1,11 @@
 import { runStep1Understand } from "./step1_understand";
 import { runStep2Assess } from "./step2_assess";
 import { runStep3Decide } from "./step3_decide";
-import { computePriority } from "../priorityRules";
-import { applyGuardrails } from "../guardrails";
-import { computeConfidenceGate } from "../confidenceGate";
-import { LLMValidationError } from "../anthropic";
-import { dedupStore } from "../dedup";
+import { computePriority } from "../policy/priorityRules";
+import { applyGuardrails } from "../policy/guardrails";
+import { computeConfidenceGate } from "../policy/confidenceGate";
+import { LLMValidationError } from "../llm/anthropic";
+import { dedupStore } from "../policy/dedup";
 import { POLICY_VERSION } from "@/config/policy";
 import type {
   FinalResult,

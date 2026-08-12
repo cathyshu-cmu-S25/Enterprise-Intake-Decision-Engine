@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePriority } from "@/lib/priorityRules";
+import { computePriority } from "@/lib/policy/priorityRules";
 import type { Step1Signals, Step2Assessment } from "@/lib/schemas";
 
 function signals(overrides: Partial<Step1Signals> = {}): Step1Signals {

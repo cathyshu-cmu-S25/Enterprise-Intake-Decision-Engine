@@ -1,4 +1,4 @@
-import { callLLMWithValidation, type LLMCallResult } from "../anthropic";
+import { callLLMWithValidation, type LLMCallResult } from "../llm/anthropic";
 import { Step2AssessmentSchema, type Step1Output, type Step2Assessment } from "../schemas";
 
 const SYSTEM_PROMPT = `You are the ASSESS stage of a three-step enterprise intake triage pipeline.

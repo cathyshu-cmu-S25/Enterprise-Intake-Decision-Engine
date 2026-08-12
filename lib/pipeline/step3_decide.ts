@@ -1,4 +1,4 @@
-import { callLLMWithValidation } from "../anthropic";
+import { callLLMWithValidation } from "../llm/anthropic";
 import {
   Step3ProceedOutputSchema,
   Step3ClarifyOutputSchema,

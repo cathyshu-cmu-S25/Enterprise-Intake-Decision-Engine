@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyGuardrails } from "@/lib/guardrails";
+import { applyGuardrails } from "@/lib/policy/guardrails";
 import { SENSITIVE_INTAKE_REVIEW } from "@/lib/teams";
 import type { Step1Signals } from "@/lib/schemas";
 

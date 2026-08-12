@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeConfidenceGate } from "@/lib/confidenceGate";
+import { computeConfidenceGate } from "@/lib/policy/confidenceGate";
 
 describe("computeConfidenceGate", () => {
   it("is low confidence and does not proceed with 2+ missing items and no P0", () => {
