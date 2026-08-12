@@ -9,9 +9,11 @@ export function RequesterResultPanel({ view }: { view: RequesterView }) {
   return (
     <div className="animate-fade-in rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-          {view.classification}
-        </span>
+        {view.classification && (
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+            {view.classification}
+          </span>
+        )}
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${
             view.status === "routed"

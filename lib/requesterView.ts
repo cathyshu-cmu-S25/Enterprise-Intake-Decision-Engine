@@ -18,7 +18,9 @@ import type { FinalResult } from "./schemas";
  * must be what actually gets sent.
  */
 export interface RequesterView {
-  classification: string;
+  // Only present when status is "routed" — a needs_more_info case hasn't
+  // been classified yet.
+  classification?: string;
   status: "routed" | "needs_more_info";
   message: string;
   clarifying_questions?: string[];
@@ -28,7 +30,7 @@ export function toRequesterView(result: FinalResult): RequesterView {
   const needsMoreInfo = (result.clarifying_questions?.length ?? 0) > 0;
 
   return {
-    classification: result.classification,
+    ...(result.classification !== undefined ? { classification: result.classification } : {}),
     status: needsMoreInfo ? "needs_more_info" : "routed",
     message: result.response_draft,
     ...(needsMoreInfo ? { clarifying_questions: result.clarifying_questions } : {}),

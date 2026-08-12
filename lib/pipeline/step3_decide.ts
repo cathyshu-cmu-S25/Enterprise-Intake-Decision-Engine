@@ -33,7 +33,9 @@ export type Step3Result =
     }
   | {
       mode: "clarify";
-      classification: string;
+      // No classification here — clarify mode means we don't yet know
+      // enough to categorize the request, which is exactly what a
+      // classification would presuppose.
       clarifying_questions: string[];
       response_draft: string;
       modelUsed: string;
@@ -83,14 +85,12 @@ export function buildProceedSystemPrompt(opts: {
 
 const CLARIFY_SYSTEM_PROMPT = `${SHARED_PREAMBLE}
 
-The confidence gate has determined there is NOT enough information to proceed to a routing decision. Produce:
-1. classification: a best-effort provisional category label — your best guess given what's known, clearly not final.
-2. clarifying_questions: 2-4 specific questions, derived directly from the "missing_information" list in the understanding, that would let a skilled operator route this correctly.
-3. response_draft: a polite reply to the requester asking exactly those clarifying questions. Do not commit to routing, priority promises, or a resolution timeline.
+The confidence gate has determined there is NOT enough information to proceed to a routing decision. You do not have enough information to classify this request yet either — do not guess at a category. Produce:
+1. clarifying_questions: 2-4 specific questions, derived directly from the "missing_information" list in the understanding, that would let a skilled operator route this correctly.
+2. response_draft: a polite reply to the requester asking exactly those clarifying questions. Do not commit to routing, priority promises, a category, or a resolution timeline.
 
 Respond with ONLY a single valid JSON object — no markdown code fences, no commentary — matching exactly this shape:
 {
-  "classification": string,
   "clarifying_questions": string[],
   "response_draft": string
 }`;
@@ -222,7 +222,6 @@ async function runClarify(input: Step3Input): Promise<Step3Result> {
 
   return {
     mode: "clarify",
-    classification: result.classification,
     clarifying_questions: result.clarifying_questions,
     response_draft: result.response_draft,
     modelUsed,

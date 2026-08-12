@@ -241,7 +241,9 @@ export async function runPipeline(
 
   const final: FinalResult = {
     request_id: requestId,
-    classification: step3.classification,
+    // Only proceed mode actually classified the request; clarify mode means
+    // there wasn't enough information to do that yet.
+    ...(step3.mode === "proceed" ? { classification: step3.classification } : {}),
     priority,
     routing,
     response_draft: step3.response_draft,

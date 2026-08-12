@@ -35,7 +35,8 @@ interface Step2Data {
 }
 interface Step3Data {
   mode: "proceed" | "clarify";
-  classification: string;
+  // Only present in proceed mode.
+  classification?: string;
   routing?: { team: string; reason: string };
   clarifying_questions?: string[];
   response_draft: string;
@@ -158,7 +159,7 @@ function Step3Content({ data }: { data: Step3Data }) {
   return (
     <div>
       <KeyValueList>
-        <KeyValueRow label="Classification" value={data.classification} />
+        {data.classification && <KeyValueRow label="Classification" value={data.classification} />}
         {data.mode === "proceed" && data.routing && (
           <KeyValueRow label="Routing" value={`${data.routing.team} — ${data.routing.reason}`} />
         )}

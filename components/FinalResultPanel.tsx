@@ -2,7 +2,9 @@ import { PriorityBadge } from "./PriorityBadge";
 import { CopyButton } from "./CopyButton";
 
 export interface FinalResultLike {
-  classification: string;
+  // Only present in proceed mode — clarify mode means the request hasn't
+  // been classified yet.
+  classification?: string;
   priority: { level: string; rule_fired: string };
   routing: { team: string; reason: string } | null;
   response_draft: string;
@@ -21,9 +23,11 @@ export function FinalResultPanel({ result }: { result: FinalResultLike }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
         <div className="flex items-center gap-3">
           <PriorityBadge level={result.priority.level} />
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-            {result.classification}
-          </span>
+          {result.classification && (
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+              {result.classification}
+            </span>
+          )}
         </div>
         <span
           className={`rounded-full px-2.5 py-1 text-xs font-semibold ${

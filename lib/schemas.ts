@@ -107,7 +107,6 @@ export const Step3ProceedOutputSchema = z.object({
 export type Step3ProceedOutput = z.infer<typeof Step3ProceedOutputSchema>;
 
 export const Step3ClarifyOutputSchema = z.object({
-  classification: z.string(),
   clarifying_questions: z.array(z.string()),
   response_draft: z.string(),
 });
@@ -147,7 +146,10 @@ export type DecisionMetadata = z.infer<typeof DecisionMetadataSchema>;
 
 export const FinalResultSchema = z.object({
   request_id: z.string(),
-  classification: z.string(),
+  // Only set in proceed mode — classification presupposes we know enough to
+  // categorize the request, which is exactly what the clarify path means we
+  // don't have yet.
+  classification: z.string().optional(),
   priority: PriorityDecisionSchema,
   routing: RoutingSchema.nullable(),
   response_draft: z.string(),

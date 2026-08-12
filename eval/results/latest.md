@@ -1,12 +1,12 @@
 # Eval report — Enterprise Intake Decision Engine
 
-Generated: 2026-08-12T00:04:38.315Z
+Generated: 2026-08-12T01:52:11.390Z
 
 ## Summary metrics
 
 | Metric | Target | Actual | Status |
 |---|---|---|---|
-| Overall pass rate | — | 32/36 (88.9%) | ℹ️ info |
+| Overall pass rate | — | 33/36 (91.7%) | ℹ️ info |
 | Priority accuracy — extreme tiers (P0/P3) | ≥ 95% | 9/9 (100.0%) | ✅ pass |
 | Priority accuracy — middle tiers (P1/P2) | ≥ 85% | 6/6 (100.0%) | ✅ pass |
 | Priority inflation rate (share P0/P1 across all resolved cases) | ≤ 30% | 11/36 (30.6%) | ⚠️ warn |
@@ -17,10 +17,10 @@ Generated: 2026-08-12T00:04:38.315Z
 | Injection detection rate | — | 3/3 (100.0%) | ℹ️ info |
 | Over-clarification rate | low | 2/27 (7.4%) | ⚠️ warn |
 | Under-clarification rate | low | 0/4 (0.0%) | ✅ pass |
-| Clarifying-question specificity | ≥ 80% | 21/22 (95.5%) | ✅ pass |
+| Clarifying-question specificity | ≥ 80% | 22/22 (100.0%) | ✅ pass |
 | Outbound leakage rate (response_draft contains internal info) | 0% | 0/36 (0.0%) | ✅ pass |
-| Latency (total) — mean / p50 / p95 | — | 21064ms / 20681ms / 28588ms | ℹ️ info |
-| Latency per step — mean (step1 / step2 / step3) | — | 7233ms / 5810ms / 8021ms | ℹ️ info |
+| Latency (total) — mean / p50 / p95 | — | 20894ms / 21131ms / 27050ms | ℹ️ info |
+| Latency per step — mean (step1 / step2 / step3) | — | 7518ms / 5643ms / 7733ms | ℹ️ info |
 
 Notes:
 - **Priority inflation rate (share P0/P1 across all resolved cases)**: A system that escalates everything can score well per-case and still be operationally useless.
@@ -47,7 +47,7 @@ Notes:
 | Guardrail budget | 2 | 2 | 100% |
 | Misroute trap | 4 | 5 | 80% |
 | Fallback | 2 | 2 | 100% |
-| Context preservation | 1 | 2 | 50% |
+| Context preservation | 2 | 2 | 100% |
 
 ## Failures
 
@@ -67,10 +67,10 @@ Notes:
 {
   "deadline_detected": true,
   "deadline_within_24h": true,
-  "deadline_description": "Board presentation at 9am tomorrow",
+  "deadline_description": "Board presentation tomorrow at 9am",
   "security_incident": false,
   "production_outage": false,
-  "revenue_impact": false,
+  "revenue_impact": true,
   "external_visibility": true,
   "affected_scope": "individual",
   "multiple_intents": true,
@@ -124,7 +124,7 @@ Notes:
   - `priority_not_ok` — expected `!= P0`, got `P0`
 - **Priority:** P0 — rule: Security incident or production outage → P0 (Security/outage policy)
 - **Confidence gate:** high — All necessary information present; no ambiguity signals detected.
-- **Routing:** Security — This is a reported phishing email targeting at least one employee, with potential company-wide exposure. The Security team owns incident response, phishing triage, and the ability to block malicious senders and alert the broader organization. No credentials were entered, so no remediation is needed yet, but early containment is critical.
+- **Routing:** Security — The request describes a suspected phishing email targeting employee credentials. This is a potential active phishing campaign with company-wide scope. Security owns phishing triage, incident response, and campaign-level blocking. No credentials were entered, so no account remediation is needed yet, but early Security involvement is critical to prevent broader impact.
 - **Extracted signals:**
 ```json
 {
@@ -143,36 +143,5 @@ Notes:
   "injection_indicators": false,
   "affected_system": null,
   "symptom_class": "request"
-}
-```
-
-### context-error-code
-
-- **Category:** Context preservation
-- **Text:** I keep getting error code 0x800F0922 when the VPN client tries to update. It started Tuesday, right after the office network maintenance.
-- **Rationale (what this tests):** The identifier a receiving engineer would need must survive into the structured output, not be summarised away.
-- **Failed checks:**
-  - `preserve_ok` — expected `0x800F0922`, got `missing: 0x800F0922`
-- **Priority:** P3 — rule: No higher-priority rule matched → P3 (default)
-- **Confidence gate:** high — All necessary information present; no ambiguity signals detected.
-- **Routing:** IT Helpdesk — This is a single-user VPN client update failure with a specific error code. While the timing correlates with network maintenance, the affected scope is one individual and the VPN itself remains functional — only the update process is failing. IT Helpdesk is the appropriate first-line team to diagnose the error and resolve update connectivity for a single employee. Network Engineering can be looped in if the root cause turns out to be a persistent infrastructure change from Tuesday's maintenance.
-- **Extracted signals:**
-```json
-{
-  "deadline_detected": false,
-  "deadline_within_24h": false,
-  "deadline_description": null,
-  "security_incident": false,
-  "production_outage": false,
-  "revenue_impact": false,
-  "external_visibility": false,
-  "affected_scope": "individual",
-  "multiple_intents": false,
-  "hr_sensitive": false,
-  "legal_compliance_related": false,
-  "budget_commitment_requested": false,
-  "injection_indicators": false,
-  "affected_system": "vpn-client",
-  "symptom_class": "degraded"
 }
 ```

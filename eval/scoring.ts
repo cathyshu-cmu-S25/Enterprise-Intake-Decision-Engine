@@ -15,7 +15,7 @@ import type { CheckResult } from "./types";
 // wording in the spec — flagged here rather than silently reinterpreted.
 function preserveHaystack(result: FinalResult): string {
   return [
-    result.classification,
+    result.classification ?? "",
     result.response_draft,
     result.decision_metadata.evidence.join(" "),
   ]

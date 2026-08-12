@@ -324,6 +324,36 @@ describe("containsAnyTeamName", () => {
   });
 });
 
+describe("step3_decide — clarify mode never classifies", () => {
+  beforeEach(() => {
+    mockCallLLMWithValidation.mockReset();
+  });
+
+  it("does not include a classification field when the gate does not proceed", async () => {
+    mockCallLLMWithValidation.mockResolvedValueOnce({
+      data: {
+        clarifying_questions: ["What system is affected?", "When did this start?"],
+        response_draft: "Could you share a couple more details so we can route this correctly?",
+      },
+      modelUsed: "claude-sonnet-4-6",
+      fallbackOccurred: false,
+    });
+
+    const result = await runStep3Decide({
+      requestText: "The dashboard is wrong again.",
+      step1,
+      assessment,
+      priority,
+      gate: { confidence: "low", reason: "test", proceed: false },
+      blockSpendCommitment: false,
+      forcedReview: false,
+    });
+
+    expect(result.mode).toBe("clarify");
+    expect("classification" in result).toBe(false);
+  });
+});
+
 describe("containsSpendCommitment", () => {
   it("detects common spend-commitment phrasing", () => {
     expect(containsSpendCommitment("We will cover the cost of the license.")).toBe(true);
