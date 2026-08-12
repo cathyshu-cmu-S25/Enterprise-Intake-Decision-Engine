@@ -14,24 +14,33 @@ import { computeMetrics } from "./metrics";
 import { printConsoleLine, printConsoleMetrics, buildMarkdownReport } from "./report";
 import type { CaseResult } from "./types";
 
-function parseArgs(argv: string[]): { only?: string; category?: string; allowFallback: boolean } {
-  const args: { only?: string; category?: string; allowFallback: boolean } = {
-    allowFallback: false,
-  };
+interface Args {
+  only?: string;
+  category?: string;
+  allowFallback: boolean;
+  noStep2: boolean;
+}
+
+function parseArgs(argv: string[]): Args {
+  const args: Args = { allowFallback: false, noStep2: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--only") args.only = argv[++i];
     if (argv[i] === "--category") args.category = argv[++i];
     if (argv[i] === "--allow-fallback") args.allowFallback = true;
+    if (argv[i] === "--no-step2") args.noStep2 = true;
   }
   return args;
 }
 
 /** Returns the step name(s) whose models_used differs from PRIMARY_MODEL, or
- * an empty array if the chain never advanced for this case. */
-function fallbackSteps(result: CaseResult): string[] {
+ * an empty array if the chain never advanced for this case. When step2 was
+ * deliberately skipped for ablation, its synthetic "n/a" model is excluded
+ * from this check — that's not a fallback, it's the point of the run. */
+function fallbackSteps(result: CaseResult, opts: { skipStep2: boolean }): string[] {
   if (!result.result) return [];
   const used = result.result.decision_metadata.models_used;
   return (Object.entries(used) as [string, string][])
+    .filter(([step]) => !(opts.skipStep2 && step === "step2"))
     .filter(([, model]) => model !== PRIMARY_MODEL)
     .map(([step, model]) => `${step} (${model})`);
 }
@@ -43,14 +52,14 @@ function selectCases(all: GoldenCase[], args: { only?: string; category?: string
   return cases;
 }
 
-async function runCase(c: GoldenCase): Promise<CaseResult> {
+async function runCase(c: GoldenCase, opts: { noStep2: boolean }): Promise<CaseResult> {
   // Reset dedup state before every case — several golden cases mention
   // overlapping systems (wifi, VPN, dashboards) and would otherwise collide
   // with each other across the run, corrupting corroborating_reports for
   // cases that are not actually related.
   dedupStore.reset();
   try {
-    const result = await runPipeline(c.text);
+    const result = await runPipeline(c.text, { skipStep2ForAblation: opts.noStep2 });
     const { checks, pass } = scoreCase(c, result);
     return {
       id: c.id,
@@ -95,15 +104,21 @@ async function main() {
   if (args.allowFallback) {
     console.log("--allow-fallback set: model-chain advancement will NOT abort this run.\n");
   }
+  if (args.noStep2) {
+    console.log(
+      "--no-step2 set: ABLATION RUN — Step 2 is skipped and business_impact is a neutral " +
+        "placeholder. Not comparable to a normal eval run; written to ablation-no-step2.md.\n"
+    );
+  }
 
   const results: CaseResult[] = [];
   for (const c of cases) {
-    const r = await runCase(c);
+    const r = await runCase(c, { noStep2: args.noStep2 });
     results.push(r);
     printConsoleLine(r);
 
     if (!args.allowFallback) {
-      const fell = fallbackSteps(r);
+      const fell = fallbackSteps(r, { skipStep2: args.noStep2 });
       if (fell.length > 0) {
         console.error(
           `\n✗✗✗ ABORTING EVAL RUN: model chain advanced during case "${r.id}" — ${fell.join(", ")}.\n` +
@@ -123,12 +138,16 @@ async function main() {
   fs.mkdirSync(resultsDir, { recursive: true });
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const jsonPath = path.join(resultsDir, `eval-${timestamp}.json`);
+  const jsonPrefix = args.noStep2 ? "ablation-no-step2" : "eval";
+  const jsonPath = path.join(resultsDir, `${jsonPrefix}-${timestamp}.json`);
   fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2));
   console.log(`\nRaw results written to ${jsonPath}`);
 
+  // Ablation runs never touch latest.md — that file is the real baseline
+  // this run is being compared against, and must not be overwritten by a
+  // deliberately degraded configuration.
   const markdown = buildMarkdownReport(results, metrics);
-  const mdPath = path.join(resultsDir, "latest.md");
+  const mdPath = path.join(resultsDir, args.noStep2 ? "ablation-no-step2.md" : "latest.md");
   fs.writeFileSync(mdPath, markdown);
   console.log(`Report written to ${mdPath}`);
 }

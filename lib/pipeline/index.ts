@@ -28,7 +28,21 @@ export type PipelineEvent =
 
 export interface RunPipelineOptions {
   onEvent?: (event: PipelineEvent) => void;
+  /**
+   * Ablation testing only — never used by the live app or a normal eval run.
+   * Skips the Step 2 LLM call entirely and substitutes a neutral
+   * business_impact ("medium") that doesn't match either priority rule that
+   * reads it, to measure how much Step 2 actually changes outcomes.
+   */
+  skipStep2ForAblation?: boolean;
 }
+
+const ABLATION_NEUTRAL_ASSESSMENT: Step2Assessment = {
+  business_impact: "medium",
+  impact_reasoning: "(ablation: Step 2 skipped, neutral value substituted)",
+  estimated_effort: "unknown",
+  effort_reasoning: "(ablation: Step 2 skipped, neutral value substituted)",
+};
 
 /** Thrown when a pipeline step aborts after failing validation twice. The
  * "error" event has already been emitted before this is thrown. */
@@ -113,18 +127,27 @@ export async function runPipeline(
   let step2Ms: number;
   let step2Model: string;
   let step2Fallback: boolean;
-  try {
-    emit({ type: "step_start", step: 2, name: "Assess" });
-    const t0 = Date.now();
-    const call = await runStep2Assess(requestText, step1);
-    step2Ms = Date.now() - t0;
-    assessment = call.data;
-    step2Model = call.modelUsed;
-    step2Fallback = call.fallbackOccurred;
+  if (options.skipStep2ForAblation) {
+    emit({ type: "step_start", step: 2, name: "Assess (SKIPPED — ablation)" });
+    assessment = ABLATION_NEUTRAL_ASSESSMENT;
+    step2Ms = 0;
+    step2Model = "n/a (skipped for ablation)";
+    step2Fallback = false;
     emit({ type: "step_output", step: 2, data: assessment });
-    if (step2Fallback) emit({ type: "model_fallback", data: { step: 2, model: step2Model } });
-  } catch (err) {
-    fail(err, emit);
+  } else {
+    try {
+      emit({ type: "step_start", step: 2, name: "Assess" });
+      const t0 = Date.now();
+      const call = await runStep2Assess(requestText, step1);
+      step2Ms = Date.now() - t0;
+      assessment = call.data;
+      step2Model = call.modelUsed;
+      step2Fallback = call.fallbackOccurred;
+      emit({ type: "step_output", step: 2, data: assessment });
+      if (step2Fallback) emit({ type: "model_fallback", data: { step: 2, model: step2Model } });
+    } catch (err) {
+      fail(err, emit);
+    }
   }
 
   // (b) deterministic priority — never set by the LLM.
